@@ -1,81 +1,104 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   CButton,
   CCard,
   CCardBody,
+  CAlert,
+  CInputGroup,
   CFormInput,
-  CRow,
-  CCol,
 } from '@coreui/react'
 
-import { initSip, call, hangup } from '../../services/sip.service'
+import sipService from '../../services/sip.service'
 
 const WebPhone = () => {
-  const [number, setNumber] = useState('')
   const [connected, setConnected] = useState(false)
+  const [incoming, setIncoming] = useState(null)
+  const [inCall, setInCall] = useState(false)
+  const [number, setNumber] = useState('918616161')
 
-  const connectSip = () => {
-    initSip({
-      wsUrl: 'wss://PBX_IP:8089/ws',   // ← заменишь
-      sipUser: '1001',                 // ← временно
-      sipPassword: '1001',             // ← временно
-      domain: 'PBX_IP',
+  useEffect(() => {
+    sipService.setListeners({
+      onRegistered: () => setConnected(true),
+      onDisconnected: () => setConnected(false),
+
+      onIncoming: (data) => setIncoming(data),
+
+      onCallStart: () => {
+        setIncoming(null)
+        setInCall(true)
+      },
+
+      onCallEnd: () => {
+        setIncoming(null)
+        setInCall(false)
+      },
     })
-    setConnected(true)
+  }, [])
+
+  const connect = () => {
+    sipService.connect({
+      wsUrl: 'ws://172.20.40.3:8088/ws',
+      sipUri: 'sip:110001@172.20.40.3',
+      password: '110001',
+    })
   }
 
   return (
     <CCard>
       <CCardBody>
         <h3>Web Phone</h3>
-        <p className="text-body-secondary">
-          Browser-based SIP phone
-        </p>
 
-        <CRow className="mb-3">
-          <CCol>
-            <CButton
-              color={connected ? 'secondary' : 'success'}
-              onClick={connectSip}
-              disabled={connected}
-            >
-              {connected ? 'SIP Connected' : 'Connect SIP'}
-            </CButton>
-          </CCol>
-        </CRow>
+        <CAlert color={connected ? 'success' : 'secondary'}>
+          {connected ? 'Connected to Asterisk' : 'Disconnected'}
+        </CAlert>
 
-        <hr />
+        {!connected && (
+          <CButton color="primary" onClick={connect}>
+            Connect
+          </CButton>
+        )}
 
-        <CRow className="mb-2">
-          <CCol md={6}>
-            <CFormInput
-              placeholder="Enter number"
-              value={number}
-              onChange={(e) => setNumber(e.target.value)}
-            />
-          </CCol>
-        </CRow>
+        {connected && !inCall && !incoming && (
+          <>
+            <CInputGroup className="mt-3">
+              <CFormInput
+                value={number}
+                onChange={(e) => setNumber(e.target.value)}
+                placeholder="Enter number"
+              />
+              <CButton color="success" onClick={() => sipService.call(number)}>
+                Call
+              </CButton>
+            </CInputGroup>
 
-        <CRow>
-          <CCol>
-            <CButton
-              color="primary"
-              className="me-2"
-              onClick={() => call(number)}
-              disabled={!connected || !number}
-            >
-              Call
-            </CButton>
+            <p className="mt-2">Waiting for calls…</p>
+          </>
+        )}
 
-            <CButton
-              color="danger"
-              onClick={hangup}
-              disabled={!connected}
-            >
-              Hangup
-            </CButton>
-          </CCol>
-        </CRow>
+        {incoming && (
+          <CAlert color="warning" className="mt-3">
+            Incoming call from <strong>{incoming.from}</strong>
+            <div className="mt-2">
+              <CButton color="success" className="me-2" onClick={() => sipService.answer()}>
+                Answer
+              </CButton>
+              <CButton color="danger" onClick={() => sipService.hangup()}>
+                Reject
+              </CButton>
+            </div>
+          </CAlert>
+        )}
+
+        {inCall && (
+          <CAlert color="success" className="mt-3">
+            Call in progress
+            <div className="mt-2">
+              <CButton color="danger" onClick={() => sipService.hangup()}>
+                Hangup
+              </CButton>
+            </div>
+          </CAlert>
+        )}
       </CCardBody>
     </CCard>
   )
