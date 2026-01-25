@@ -1,77 +1,9 @@
 import JsSIP from 'jssip'
 
-let ua = null
-let currentSession = null
-
-export function initSip({ wsUrl, sipUser, sipPassword, domain }) {
-  if (ua) {
-    console.warn('SIP already initialized')
-    return
-  }
-
-  const socket = new JsSIP.WebSocketInterface(wsUrl)
-
-  ua = new JsSIP.UA({
-    sockets: [socket],
-    uri: `sip:${sipUser}@${domain}`,
-    password: sipPassword,
-    register: true,
-    session_timers: false,
-  })
-
-  ua.on('registered', () => {
-    console.log('📞 SIP registered')
-  })
-
-  ua.on('registrationFailed', (e) => {
-    console.error('❌ SIP registration failed', e.cause)
-  })
-
-  ua.on('newRTCSession', (e) => {
-    currentSession = e.session
-
-    if (e.originator === 'remote') {
-      console.log('📥 Incoming call')
-    }
-
-    currentSession.on('ended', () => {
-      console.log('📴 Call ended')
-      currentSession = null
-    })
-
-    currentSession.on('failed', () => {
-      console.log('❌ Call failed')
-      currentSession = null
-    })
-  })
-
-  ua.start()
-}
-
-export function call(number) {
-  if (!ua) {
-    console.error('SIP not initialized')
-    return
-  }
-
-  ua.call(`sip:${number}`, {
-    mediaConstraints: { audio: true, video: false },
-  })
-}
-
-export function hangup() {
-  if (currentSession) {
-    currentSession.terminate()
-    currentSession = null
-  }
-}
-import JsSIP from 'jssip'
-
 class SipService {
   ua = null
   currentSession = null
   remoteAudio = null
-  isCalling = false
 
   listeners = {
     onRegistered: null,
@@ -86,7 +18,10 @@ class SipService {
   }
 
   connect({ wsUrl, sipUri, password }) {
-    if (this.ua) return
+    if (this.ua) {
+      console.warn('⚠ SIP already connected')
+      return
+    }
 
     console.log('🔌 Connecting SIP…')
 
@@ -100,11 +35,15 @@ class SipService {
       session_timers: false,
     })
 
-    /* === REGISTRATION === */
+    /* ===== REGISTRATION ===== */
 
     this.ua.on('registered', () => {
       console.log('✅ SIP registered')
       this.listeners.onRegistered?.()
+    })
+
+    this.ua.on('registrationFailed', (e) => {
+      console.error('❌ Registration failed', e)
     })
 
     this.ua.on('disconnected', () => {
@@ -112,31 +51,40 @@ class SipService {
       this.listeners.onDisconnected?.()
     })
 
-    /* === CALL HANDLING === */
+    /* ===== CALL HANDLING ===== */
 
     this.ua.on('newRTCSession', (e) => {
       const session = e.session
 
-      // ❗ ЗАЩИТА ОТ ПЕТЛИ
+      // ⛔ prevent loop / duplicate
       if (this.currentSession) {
-        console.warn('⚠️ Session already exists, ignoring new one')
-        session.terminate()
+        console.warn('⚠ Session already exists, ignoring')
         return
       }
 
       this.currentSession = session
-      console.log('📞 New RTC session', e.originator)
+      console.log('📞 New RTC session:', e.originator)
 
-      /* 🔊 AUDIO */
+      /* 🔊 Prepare audio */
       this.remoteAudio = document.createElement('audio')
       this.remoteAudio.autoplay = true
       this.remoteAudio.playsInline = true
 
-      session.connection.addEventListener('track', (event) => {
-        this.remoteAudio.srcObject = event.streams[0]
+      /* ✅ CORRECT WAY */
+      session.on('peerconnection', (e) => {
+        const pc = e.peerconnection
+        console.log('🧠 PeerConnection ready')
+
+        pc.addEventListener('track', (event) => {
+          console.log('🔊 Remote audio track')
+          this.remoteAudio.srcObject = event.streams[0]
+
+          setTimeout(() => {
+            this.remoteAudio.play().catch(() => {})
+          }, 200)
+        })
       })
 
-      /* 📥 INCOMING ONLY */
       if (e.originator === 'remote') {
         this.listeners.onIncoming?.({
           from: session.remote_identity.uri.user,
@@ -146,7 +94,6 @@ class SipService {
       session.on('accepted', () => {
         console.log('📞 Call accepted')
         this.listeners.onCallStart?.()
-        this.isCalling = false
       })
 
       session.on('ended', () => {
@@ -164,12 +111,7 @@ class SipService {
   }
 
   call(number) {
-    if (!this.ua || this.currentSession) {
-      console.warn('⚠️ Cannot call, session exists or UA not ready')
-      return
-    }
-
-    this.isCalling = true
+    if (!this.ua || this.currentSession) return
 
     console.log('📲 Calling', number)
 
@@ -190,21 +132,19 @@ class SipService {
 
   hangup() {
     if (this.currentSession) {
+      console.log('📴 Hangup')
       this.currentSession.terminate()
       this.cleanup()
     }
   }
 
   cleanup() {
-    console.log('🧹 Cleanup call')
-
     if (this.remoteAudio) {
       this.remoteAudio.srcObject = null
       this.remoteAudio = null
     }
 
     this.currentSession = null
-    this.isCalling = false
     this.listeners.onCallEnd?.()
   }
 }
