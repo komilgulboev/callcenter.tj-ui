@@ -7,12 +7,14 @@ class SipService {
   remoteAudio = null
   connecting = false
 
+  state = 'idle' 
+  // idle | ringing | calling | in-call | on-hold | muted
+
   listeners = {
     onRegistered: null,
     onDisconnected: null,
     onIncoming: null,
-    onCallStart: null,
-    onCallEnd: null,
+    onStateChange: null,
     onError: null,
   }
 
@@ -20,8 +22,13 @@ class SipService {
     this.listeners = { ...this.listeners, ...listeners }
   }
 
+  emitState(state) {
+    this.state = state
+    this.listeners.onStateChange?.(state)
+  }
+
   /* ===============================
-     LOAD SIP CREDENTIALS FROM API
+     LOAD SIP CREDENTIALS
      =============================== */
   async loadCredentials() {
     const res = await api.get('/api/sip/credentials')
@@ -37,9 +44,7 @@ class SipService {
 
     try {
       const creds = await this.loadCredentials()
-
       const sipUri = `sip:${creds.sipUser}@${creds.domain}`
-      console.log('🔌 Connecting SIP:', sipUri)
 
       const socket = new JsSIP.WebSocketInterface(creds.wsUrl)
 
@@ -51,64 +56,62 @@ class SipService {
         session_timers: false,
       })
 
-      /* ===== REGISTRATION ===== */
-
       this.ua.on('registered', () => {
-        console.log('✅ SIP registered')
         this.connecting = false
         this.listeners.onRegistered?.()
       })
 
-      this.ua.on('registrationFailed', (e) => {
-        console.error('❌ Registration failed', e)
-        this.cleanupUa()
-        this.listeners.onError?.('SIP registration failed')
-      })
-
       this.ua.on('disconnected', () => {
-        console.warn('🔌 WS disconnected')
         this.cleanupUa()
         this.listeners.onDisconnected?.()
       })
 
-      /* ===== CALL HANDLING ===== */
+      /* ================= CALL HANDLING ================= */
 
       this.ua.on('newRTCSession', (e) => {
         const session = e.session
 
-        // ⛔ HARD PROTECTION FROM LOOPS
+        // ⛔ защита от циклов
         if (this.currentSession) {
-          console.warn('⚠ Session already exists, rejecting')
           session.terminate()
           return
         }
 
         this.currentSession = session
-        console.log('📞 New RTC session:', e.originator)
 
-        /* 🔊 AUDIO (WORKING WAY) */
+        /* 🔊 AUDIO — СТАБИЛЬНЫЙ СПОСОБ */
         this.remoteAudio = document.createElement('audio')
         this.remoteAudio.autoplay = true
         this.remoteAudio.playsInline = true
         document.body.appendChild(this.remoteAudio)
 
-        session.connection.addEventListener('track', (event) => {
-          console.log('🔊 Remote audio received')
-          this.remoteAudio.srcObject = event.streams[0]
+        const waitForConnection = () => {
+          if (!session.connection) {
+            setTimeout(waitForConnection, 50)
+            return
+          }
 
-          setTimeout(() => {
-            this.remoteAudio.play().catch(() => {})
-          }, 200)
-        })
-
-        if (e.originator === 'remote') {
-          this.listeners.onIncoming?.({
-            from: session.remote_identity.uri.user,
+          session.connection.addEventListener('track', (event) => {
+            this.remoteAudio.srcObject = event.streams[0]
+            setTimeout(() => {
+              this.remoteAudio.play().catch(() => {})
+            }, 100)
           })
         }
 
+        waitForConnection()
+
+        if (e.originator === 'remote') {
+          this.emitState('ringing')
+          this.listeners.onIncoming?.({
+            from: session.remote_identity.uri.user,
+          })
+        } else {
+          this.emitState('calling')
+        }
+
         session.on('accepted', () => {
-          this.listeners.onCallStart?.()
+          this.emitState('in-call')
         })
 
         session.on('ended', () => this.cleanupCall())
@@ -117,9 +120,8 @@ class SipService {
 
       this.ua.start()
     } catch (err) {
-      console.error('❌ SIP connect error', err)
       this.cleanupUa()
-      this.listeners.onError?.('Failed to connect to SIP')
+      this.listeners.onError?.('Failed to connect SIP')
     }
   }
 
@@ -129,8 +131,6 @@ class SipService {
   call(number) {
     if (!this.ua || this.currentSession) return
 
-    console.log('📲 Calling', number)
-
     this.ua.call(`sip:${number}`, {
       mediaConstraints: { audio: true, video: false },
     })
@@ -138,8 +138,7 @@ class SipService {
 
   answer() {
     if (!this.currentSession) return
-
-    console.log('📞 Answering call')
+    if (!this.currentSession.isInProgress()) return
 
     this.currentSession.answer({
       mediaConstraints: { audio: true, video: false },
@@ -147,11 +146,39 @@ class SipService {
   }
 
   hangup() {
-    if (this.currentSession) {
-      console.log('📴 Hanging up')
-      this.currentSession.terminate()
-      this.cleanupCall()
-    }
+    this.currentSession?.terminate()
+    this.cleanupCall()
+  }
+
+  /* ===============================
+     MUTE / HOLD
+     =============================== */
+  mute() {
+    if (!this.currentSession) return
+    this.currentSession.mute({ audio: true })
+    this.emitState('muted')
+  }
+
+  unmute() {
+    if (!this.currentSession) return
+    this.currentSession.unmute({ audio: true })
+    this.emitState('in-call')
+  }
+
+  hold() {
+    if (!this.currentSession) return
+    if (this.currentSession.isOnHold().local) return
+
+    this.currentSession.hold()
+    this.emitState('on-hold')
+  }
+
+  unhold() {
+    if (!this.currentSession) return
+    if (!this.currentSession.isOnHold().local) return
+
+    this.currentSession.unhold()
+    this.emitState('in-call')
   }
 
   /* ===============================
@@ -165,12 +192,13 @@ class SipService {
     }
 
     this.currentSession = null
-    this.listeners.onCallEnd?.()
+    this.emitState('idle')
   }
 
   cleanupUa() {
     this.ua = null
     this.connecting = false
+    this.emitState('idle')
   }
 }
 

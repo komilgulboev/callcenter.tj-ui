@@ -12,10 +12,10 @@ import {
 import sipService from '../../services/sip.service'
 
 const WebPhone = () => {
-  const [status, setStatus] = useState('connecting') // connecting | connected | error
+  const [status, setStatus] = useState('connecting')
   const [error, setError] = useState(null)
   const [incoming, setIncoming] = useState(null)
-  const [inCall, setInCall] = useState(false)
+  const [state, setState] = useState('idle')
   const [number, setNumber] = useState('918616161')
 
   useEffect(() => {
@@ -33,17 +33,12 @@ const WebPhone = () => {
         setError(msg)
       },
       onIncoming: (data) => setIncoming(data),
-      onCallStart: () => {
-        setIncoming(null)
-        setInCall(true)
-      },
-      onCallEnd: () => {
-        setIncoming(null)
-        setInCall(false)
+      onStateChange: (s) => {
+        setState(s)
+        if (s !== 'ringing') setIncoming(null)
       },
     })
 
-    // 🔥 AUTO CONNECT
     sipService.connect()
   }, [])
 
@@ -55,51 +50,44 @@ const WebPhone = () => {
         {status === 'connecting' && (
           <CAlert color="info">
             <CSpinner size="sm" className="me-2" />
-            Connecting to Asterisk…
+            Connecting…
           </CAlert>
         )}
 
         {status === 'connected' && (
-          <CAlert color="success">Connected to Asterisk</CAlert>
+          <CAlert color="success">Connected</CAlert>
         )}
 
         {status === 'error' && (
           <CAlert color="danger">
             {error}
             <div className="mt-2">
-              <CButton
-                size="sm"
-                color="light"
-                onClick={() => {
-                  setStatus('connecting')
-                  setError(null)
-                  sipService.connect()
-                }}
-              >
+              <CButton size="sm" onClick={() => sipService.connect()}>
                 Reconnect
               </CButton>
             </div>
           </CAlert>
         )}
 
-        {status === 'connected' && !incoming && !inCall && (
+        {/* OUTGOING */}
+        {state === 'idle' && status === 'connected' && (
           <CInputGroup className="mt-3">
             <CFormInput
               value={number}
               onChange={(e) => setNumber(e.target.value)}
-              placeholder="Enter number"
             />
-            <CButton color="success" onClick={() => sipService.call(number)}>
+            <CButton onClick={() => sipService.call(number)}>
               Call
             </CButton>
           </CInputGroup>
         )}
 
+        {/* INCOMING */}
         {incoming && (
           <CAlert color="warning" className="mt-3">
-            Incoming call from <strong>{incoming.from}</strong>
+            Incoming from <strong>{incoming.from}</strong>
             <div className="mt-2">
-              <CButton color="success" className="me-2" onClick={() => sipService.answer()}>
+              <CButton onClick={() => sipService.answer()} className="me-2">
                 Answer
               </CButton>
               <CButton color="danger" onClick={() => sipService.hangup()}>
@@ -109,11 +97,24 @@ const WebPhone = () => {
           </CAlert>
         )}
 
-        {inCall && (
+        {/* IN CALL */}
+        {state !== 'idle' && state !== 'ringing' && (
           <CAlert color="success" className="mt-3">
-            Call in progress
-            <div className="mt-2">
-              <CButton color="danger" onClick={() => sipService.hangup()}>
+            State: <strong>{state}</strong>
+            <div className="mt-2 d-flex gap-2">
+              <CButton size="sm" onClick={() => sipService.mute()}>
+                Mute
+              </CButton>
+              <CButton size="sm" onClick={() => sipService.unmute()}>
+                Unmute
+              </CButton>
+              <CButton size="sm" onClick={() => sipService.hold()}>
+                Hold
+              </CButton>
+              <CButton size="sm" onClick={() => sipService.unhold()}>
+                Unhold
+              </CButton>
+              <CButton size="sm" color="danger" onClick={() => sipService.hangup()}>
                 Hangup
               </CButton>
             </div>

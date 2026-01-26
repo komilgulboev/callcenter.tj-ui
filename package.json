@@ -1,6 +1,5 @@
 {
-<<<<<<< HEAD
-<<<<<<< HEAD
+
   "name": "@coreui/coreui-free-react-admin-template",
   "version": "5.5.0",
   "description": "CoreUI Free React Admin Template",
@@ -55,42 +54,5 @@
     "prettier": "3.7.4",
     "sass": "^1.97.0",
     "vite": "^7.3.0"
-=======
-=======
->>>>>>> a42128df7d8bcc574702a095279c5651441b4c51
-  "name": "coreui-react",
-  "version": "1.0.0-alpha.6",
-  "description": "Open Source React Admin Template",
-  "main": "",
-  "homepage": "http://coreui.io",
-  "github": "https://github.com/mrholek/CoreUI-React#readme",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/mrholek/CoreUI-React.git"
-  },
-  "keywords": [
-    "Bootstrap",
-    "Admin",
-    "Template",
-    "Open Source",
-    "CSS",
-    "HTML",
-    "RWD",
-    "Dashboard",
-    "React",
-    "React.js",
-    "Reactjs"
-  ],
-  "author": "Łukasz Holeczek",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/mrholek/CoreUI-React/issues"
-<<<<<<< HEAD
->>>>>>> a42128df7d8bcc574702a095279c5651441b4c51
-=======
->>>>>>> a42128df7d8bcc574702a095279c5651441b4c51
   }
 }
