@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+
 import {
   CButton,
   CCard,
@@ -20,12 +22,18 @@ import { cilLockLocked, cilUser } from '@coreui/icons'
 import { login, me } from '../../../services/auth.service'
 
 const Login = () => {
+  const { t, i18n } = useTranslation('auth')
   const navigate = useNavigate()
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+
+  const changeLang = (lang) => {
+    i18n.changeLanguage(lang)
+    localStorage.setItem('lang', lang)
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -36,8 +44,8 @@ const Login = () => {
       await login(username, password)
       await me()
       navigate('/')
-    } catch (err) {
-      setError('Invalid username or password')
+    } catch {
+      setError(t('error.invalid'))
     } finally {
       setLoading(false)
     }
@@ -51,9 +59,30 @@ const Login = () => {
             <CCardGroup>
               <CCard className="p-4">
                 <CCardBody>
+
+                  {/* language selector – аккуратно, без влияния на дизайн */}
+                  <div className="text-end mb-2">
+                    <select
+                      value={i18n.language}
+                      onChange={(e) => changeLang(e.target.value)}
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        fontSize: '0.9rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="ru">RU</option>
+                      <option value="en">EN</option>
+                      <option value="tj">TJ</option>
+                    </select>
+                  </div>
+
                   <CForm onSubmit={handleSubmit}>
-                    <h1>Вход</h1>
-                    <p className="text-body-secondary">Sign In to your account</p>
+                    <h1>{t('title')}</h1>
+                    <p className="text-body-secondary">
+                      {t('subtitle')}
+                    </p>
 
                     {error && (
                       <CAlert color="danger" className="mb-3">
@@ -66,7 +95,7 @@ const Login = () => {
                         <CIcon icon={cilUser} />
                       </CInputGroupText>
                       <CFormInput
-                        placeholder="Username"
+                        placeholder={t('username')}
                         autoComplete="username"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
@@ -80,7 +109,7 @@ const Login = () => {
                       </CInputGroupText>
                       <CFormInput
                         type="password"
-                        placeholder="Password"
+                        placeholder={t('password')}
                         autoComplete="current-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -96,12 +125,12 @@ const Login = () => {
                           type="submit"
                           disabled={loading}
                         >
-                          {loading ? 'Signing in...' : 'Login'}
+                          {loading ? t('loading') : t('login')}
                         </CButton>
                       </CCol>
                       <CCol xs={6} className="text-right">
                         <CButton color="link" className="px-0" disabled>
-                          Forgot password?
+                          {t('forgot')}
                         </CButton>
                       </CCol>
                     </CRow>
@@ -109,21 +138,21 @@ const Login = () => {
                 </CCardBody>
               </CCard>
 
+              {/* ВТОРОЙ КАРД — БЕЗ ИЗМЕНЕНИЙ ПО ДИЗАЙНУ */}
               <CCard className="text-white bg-primary py-5" style={{ width: '44%' }}>
                 <CCardBody className="text-center">
                   <div>
-                    <h2>Sign up</h2>
-                    <p>
-                      Contact administrator to create your account.
-                    </p>
+                    <h2>{t('signup.title')}</h2>
+                    <p>{t('signup.text')}</p>
                     <Link to="/register">
                       <CButton color="light" className="mt-3" active tabIndex={-1}>
-                        Register Now!
+                        {t('signup.button')}
                       </CButton>
                     </Link>
                   </div>
                 </CCardBody>
               </CCard>
+
             </CCardGroup>
           </CCol>
         </CRow>

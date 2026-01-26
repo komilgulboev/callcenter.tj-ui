@@ -1,0 +1,10 @@
+{
+  "dashboard": "Dashboard",
+  "users": "Users",
+  "settings": "Settings",
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "auto": "Auto"
+  }
+}

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
+import { useTranslation } from 'react-i18next'
+
 import {
   CContainer,
   CDropdown,
@@ -29,6 +31,7 @@ import { AppBreadcrumb } from './index'
 import { AppHeaderDropdown } from './header/index'
 
 const AppHeader = () => {
+  const { t } = useTranslation('common')
   const headerRef = useRef()
   const { colorMode, setColorMode } = useColorModes('coreui-free-react-admin-template-theme')
 
@@ -54,40 +57,32 @@ const AppHeader = () => {
         >
           <CIcon icon={cilMenu} size="lg" />
         </CHeaderToggler>
+
         <CHeaderNav className="d-none d-md-flex">
           <CNavItem>
             <CNavLink to="/dashboard" as={NavLink}>
-              Dashboard
+              {t('dashboard')}
             </CNavLink>
           </CNavItem>
           <CNavItem>
-            <CNavLink href="#">Users</CNavLink>
+            <CNavLink href="#">{t('users')}</CNavLink>
           </CNavItem>
           <CNavItem>
-            <CNavLink href="#">Settings</CNavLink>
+            <CNavLink href="#">{t('settings')}</CNavLink>
           </CNavItem>
         </CHeaderNav>
+
         <CHeaderNav className="ms-auto">
-          <CNavItem>
-            <CNavLink href="#">
-              <CIcon icon={cilBell} size="lg" />
-            </CNavLink>
-          </CNavItem>
-          <CNavItem>
-            <CNavLink href="#">
-              <CIcon icon={cilList} size="lg" />
-            </CNavLink>
-          </CNavItem>
-          <CNavItem>
-            <CNavLink href="#">
-              <CIcon icon={cilEnvelopeOpen} size="lg" />
-            </CNavLink>
-          </CNavItem>
+          <CNavItem><CNavLink href="#"><CIcon icon={cilBell} size="lg" /></CNavLink></CNavItem>
+          <CNavItem><CNavLink href="#"><CIcon icon={cilList} size="lg" /></CNavLink></CNavItem>
+          <CNavItem><CNavLink href="#"><CIcon icon={cilEnvelopeOpen} size="lg" /></CNavLink></CNavItem>
         </CHeaderNav>
+
         <CHeaderNav>
           <li className="nav-item py-1">
             <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
           </li>
+
           <CDropdown variant="nav-item" placement="bottom-end">
             <CDropdownToggle caret={false}>
               {colorMode === 'dark' ? (
@@ -99,41 +94,26 @@ const AppHeader = () => {
               )}
             </CDropdownToggle>
             <CDropdownMenu>
-              <CDropdownItem
-                active={colorMode === 'light'}
-                className="d-flex align-items-center"
-                as="button"
-                type="button"
-                onClick={() => setColorMode('light')}
-              >
-                <CIcon className="me-2" icon={cilSun} size="lg" /> Light
+              <CDropdownItem active={colorMode === 'light'} onClick={() => setColorMode('light')}>
+                <CIcon className="me-2" icon={cilSun} size="lg" /> {t('theme.light')}
               </CDropdownItem>
-              <CDropdownItem
-                active={colorMode === 'dark'}
-                className="d-flex align-items-center"
-                as="button"
-                type="button"
-                onClick={() => setColorMode('dark')}
-              >
-                <CIcon className="me-2" icon={cilMoon} size="lg" /> Dark
+              <CDropdownItem active={colorMode === 'dark'} onClick={() => setColorMode('dark')}>
+                <CIcon className="me-2" icon={cilMoon} size="lg" /> {t('theme.dark')}
               </CDropdownItem>
-              <CDropdownItem
-                active={colorMode === 'auto'}
-                className="d-flex align-items-center"
-                as="button"
-                type="button"
-                onClick={() => setColorMode('auto')}
-              >
-                <CIcon className="me-2" icon={cilContrast} size="lg" /> Auto
+              <CDropdownItem active={colorMode === 'auto'} onClick={() => setColorMode('auto')}>
+                <CIcon className="me-2" icon={cilContrast} size="lg" /> {t('theme.auto')}
               </CDropdownItem>
             </CDropdownMenu>
           </CDropdown>
+
           <li className="nav-item py-1">
             <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
           </li>
+
           <AppHeaderDropdown />
         </CHeaderNav>
       </CContainer>
+
       <CContainer className="px-4" fluid>
         <AppBreadcrumb />
       </CContainer>
