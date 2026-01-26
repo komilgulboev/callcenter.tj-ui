@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # CoreUI Free React Admin Template [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social&logo=twitter)](https://twitter.com/intent/tweet?text=CoreUI%20-%20Free%React%204%20Admin%20Template%20&url=https://coreui.io&hashtags=bootstrap,admin,template,dashboard,panel,free,angular,react,vue)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
@@ -244,6 +245,8 @@ copyright 2025 creativeLabs Łukasz Holeczek.
 Code released under [the MIT license](https://github.com/coreui/coreui-free-react-admin-template/blob/main/LICENSE).
 =======
 <<<<<<< HEAD
+=======
+>>>>>>> a42128df7d8bcc574702a095279c5651441b4c51
 # callcenter.tj-ui
 
 
@@ -408,4 +411,7 @@ CoreUI is an MIT licensed open source project and completely free to use. Howeve
 
 As of now I am exploring the possibility of working on CoreUI fulltime - if you are a business that is building core products using CoreUI, I am also open to conversations regarding custom sponsorship / consulting arrangements. Get in touch on [Twitter](https://twitter.com/lukaszholeczek).
 >>>>>>> c3354fa (Hello World!)
+<<<<<<< HEAD
+>>>>>>> a42128df7d8bcc574702a095279c5651441b4c51
+=======
 >>>>>>> a42128df7d8bcc574702a095279c5651441b4c51
