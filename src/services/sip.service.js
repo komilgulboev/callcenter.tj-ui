@@ -21,9 +21,9 @@ class SipService {
   }
 
   /* ===============================
-     LOAD SIP CREDENTIALS
+     LOAD SIP CREDENTIALS FROM API
      =============================== */
-  async getSipCredentials() {
+  async loadCredentials() {
     const res = await api.get('/api/sip/credentials')
     return res.data
   }
@@ -36,24 +36,23 @@ class SipService {
     this.connecting = true
 
     try {
-      const creds = await this.getSipCredentials()
+      const creds = await this.loadCredentials()
 
-      console.log('🔌 SIP connect', creds)
-
-      /* ✅ BUILD sipUri HERE */
       const sipUri = `sip:${creds.sipUser}@${creds.domain}`
+      console.log('🔌 Connecting SIP:', sipUri)
 
       const socket = new JsSIP.WebSocketInterface(creds.wsUrl)
 
       this.ua = new JsSIP.UA({
         sockets: [socket],
-        uri: sipUri,                    // ✅ FIX
-        password: creds.sipPassword,    // ✅ FIX
+        uri: sipUri,
+        password: creds.sipPassword,
         register: true,
         session_timers: false,
       })
 
-      /* === REGISTRATION === */
+      /* ===== REGISTRATION ===== */
+
       this.ua.on('registered', () => {
         console.log('✅ SIP registered')
         this.connecting = false
@@ -63,7 +62,7 @@ class SipService {
       this.ua.on('registrationFailed', (e) => {
         console.error('❌ Registration failed', e)
         this.cleanupUa()
-        this.listeners.onError?.('Registration failed')
+        this.listeners.onError?.('SIP registration failed')
       })
 
       this.ua.on('disconnected', () => {
@@ -72,32 +71,34 @@ class SipService {
         this.listeners.onDisconnected?.()
       })
 
-      /* === CALL HANDLING === */
+      /* ===== CALL HANDLING ===== */
+
       this.ua.on('newRTCSession', (e) => {
+        const session = e.session
+
+        // ⛔ HARD PROTECTION FROM LOOPS
         if (this.currentSession) {
-          console.warn('⚠️ Ignoring extra session')
+          console.warn('⚠ Session already exists, rejecting')
+          session.terminate()
           return
         }
 
-        const session = e.session
         this.currentSession = session
+        console.log('📞 New RTC session:', e.originator)
 
-        console.log('📞 New RTC session', e.originator)
-
-        /* 🔊 AUDIO */
+        /* 🔊 AUDIO (WORKING WAY) */
         this.remoteAudio = document.createElement('audio')
         this.remoteAudio.autoplay = true
         this.remoteAudio.playsInline = true
-        this.remoteAudio.volume = 1
+        document.body.appendChild(this.remoteAudio)
 
-        session.on('peerconnection', () => {
-          const pc = session.connection
-          if (!pc) return
+        session.connection.addEventListener('track', (event) => {
+          console.log('🔊 Remote audio received')
+          this.remoteAudio.srcObject = event.streams[0]
 
-          pc.addEventListener('track', (event) => {
-            this.remoteAudio.srcObject = event.streams[0]
+          setTimeout(() => {
             this.remoteAudio.play().catch(() => {})
-          })
+          }, 200)
         })
 
         if (e.originator === 'remote') {
@@ -117,8 +118,8 @@ class SipService {
       this.ua.start()
     } catch (err) {
       console.error('❌ SIP connect error', err)
-      this.connecting = false
-      this.listeners.onError?.(err.message || 'SIP connect error')
+      this.cleanupUa()
+      this.listeners.onError?.('Failed to connect to SIP')
     }
   }
 
@@ -136,14 +137,21 @@ class SipService {
   }
 
   answer() {
-    this.currentSession?.answer({
+    if (!this.currentSession) return
+
+    console.log('📞 Answering call')
+
+    this.currentSession.answer({
       mediaConstraints: { audio: true, video: false },
     })
   }
 
   hangup() {
-    this.currentSession?.terminate()
-    this.cleanupCall()
+    if (this.currentSession) {
+      console.log('📴 Hanging up')
+      this.currentSession.terminate()
+      this.cleanupCall()
+    }
   }
 
   /* ===============================
@@ -152,6 +160,7 @@ class SipService {
   cleanupCall() {
     if (this.remoteAudio) {
       this.remoteAudio.srcObject = null
+      this.remoteAudio.remove()
       this.remoteAudio = null
     }
 

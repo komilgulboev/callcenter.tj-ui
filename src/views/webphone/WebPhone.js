@@ -52,7 +52,6 @@ const WebPhone = () => {
       <CCardBody>
         <h3>Web Phone</h3>
 
-        {/* STATUS */}
         {status === 'connecting' && (
           <CAlert color="info">
             <CSpinner size="sm" className="me-2" />
@@ -83,7 +82,6 @@ const WebPhone = () => {
           </CAlert>
         )}
 
-        {/* OUTGOING */}
         {status === 'connected' && !incoming && !inCall && (
           <CInputGroup className="mt-3">
             <CFormInput
@@ -91,38 +89,26 @@ const WebPhone = () => {
               onChange={(e) => setNumber(e.target.value)}
               placeholder="Enter number"
             />
-            <CButton
-              color="success"
-              onClick={() => sipService.call(number)}
-            >
+            <CButton color="success" onClick={() => sipService.call(number)}>
               Call
             </CButton>
           </CInputGroup>
         )}
 
-        {/* INCOMING */}
         {incoming && (
           <CAlert color="warning" className="mt-3">
             Incoming call from <strong>{incoming.from}</strong>
             <div className="mt-2">
-              <CButton
-                color="success"
-                className="me-2"
-                onClick={() => sipService.answer()}
-              >
+              <CButton color="success" className="me-2" onClick={() => sipService.answer()}>
                 Answer
               </CButton>
-              <CButton
-                color="danger"
-                onClick={() => sipService.hangup()}
-              >
+              <CButton color="danger" onClick={() => sipService.hangup()}>
                 Reject
               </CButton>
             </div>
           </CAlert>
         )}
 
-        {/* ACTIVE CALL */}
         {inCall && (
           <CAlert color="success" className="mt-3">
             Call in progress
