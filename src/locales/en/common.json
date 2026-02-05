@@ -1,5 +1,8 @@
 {
   "dashboard": "Dashboard",
+  "phone": "Phone",
+  "monitoring": "Monitoring",
+  "home": "Home",
   "users": "Users",
   "settings": "Settings",
   "theme": {

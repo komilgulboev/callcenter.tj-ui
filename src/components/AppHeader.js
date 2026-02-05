@@ -31,17 +31,28 @@ import { AppBreadcrumb } from './index'
 import { AppHeaderDropdown } from './header/index'
 
 const AppHeader = () => {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const headerRef = useRef()
-  const { colorMode, setColorMode } = useColorModes('coreui-free-react-admin-template-theme')
+  const { colorMode, setColorMode } = useColorModes(
+    'coreui-free-react-admin-template-theme',
+  )
 
   const dispatch = useDispatch()
   const sidebarShow = useSelector((state) => state.sidebarShow)
 
+  // язык: смена + сохранение
+  const changeLanguage = (lang) => {
+    i18n.changeLanguage(lang)
+    localStorage.setItem('lang', lang)
+  }
+
   useEffect(() => {
     const handleScroll = () => {
       headerRef.current &&
-        headerRef.current.classList.toggle('shadow-sm', document.documentElement.scrollTop > 0)
+        headerRef.current.classList.toggle(
+          'shadow-sm',
+          document.documentElement.scrollTop > 0,
+        )
     }
 
     document.addEventListener('scroll', handleScroll)
@@ -51,6 +62,7 @@ const AppHeader = () => {
   return (
     <CHeader position="sticky" className="mb-4 p-0" ref={headerRef}>
       <CContainer className="border-bottom px-4" fluid>
+        {/* Sidebar toggle */}
         <CHeaderToggler
           onClick={() => dispatch({ type: 'set', sidebarShow: !sidebarShow })}
           style={{ marginInlineStart: '-14px' }}
@@ -58,31 +70,46 @@ const AppHeader = () => {
           <CIcon icon={cilMenu} size="lg" />
         </CHeaderToggler>
 
-        <CHeaderNav className="d-none d-md-flex">
+        {/* Left header menu */}
+        {/* <CHeaderNav className="d-none d-md-flex">
           <CNavItem>
             <CNavLink to="/dashboard" as={NavLink}>
-              {t('dashboard')}
+              {t('monitoring')}
             </CNavLink>
           </CNavItem>
           <CNavItem>
-            <CNavLink href="#">{t('users')}</CNavLink>
+            <CNavLink href="/webphone">
+              {t('phone')}
+            </CNavLink>
+          </CNavItem>
+        </CHeaderNav>}*/}
+
+        {/* Icons (right side) */}
+        <CHeaderNav className="ms-auto">
+          <CNavItem>
+            <CNavLink href="#">
+              <CIcon icon={cilBell} size="lg" />
+            </CNavLink>
           </CNavItem>
           <CNavItem>
-            <CNavLink href="#">{t('settings')}</CNavLink>
+            <CNavLink href="#">
+              <CIcon icon={cilList} size="lg" />
+            </CNavLink>
+          </CNavItem>
+          <CNavItem>
+            <CNavLink href="#">
+              <CIcon icon={cilEnvelopeOpen} size="lg" />
+            </CNavLink>
           </CNavItem>
         </CHeaderNav>
 
-        <CHeaderNav className="ms-auto">
-          <CNavItem><CNavLink href="#"><CIcon icon={cilBell} size="lg" /></CNavLink></CNavItem>
-          <CNavItem><CNavLink href="#"><CIcon icon={cilList} size="lg" /></CNavLink></CNavItem>
-          <CNavItem><CNavLink href="#"><CIcon icon={cilEnvelopeOpen} size="lg" /></CNavLink></CNavItem>
-        </CHeaderNav>
-
+        {/* Theme + Language + Profile */}
         <CHeaderNav>
           <li className="nav-item py-1">
             <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
           </li>
 
+          {/* Theme switcher */}
           <CDropdown variant="nav-item" placement="bottom-end">
             <CDropdownToggle caret={false}>
               {colorMode === 'dark' ? (
@@ -94,14 +121,63 @@ const AppHeader = () => {
               )}
             </CDropdownToggle>
             <CDropdownMenu>
-              <CDropdownItem active={colorMode === 'light'} onClick={() => setColorMode('light')}>
-                <CIcon className="me-2" icon={cilSun} size="lg" /> {t('theme.light')}
+              <CDropdownItem
+                active={colorMode === 'light'}
+                onClick={() => setColorMode('light')}
+              >
+                <CIcon className="me-2" icon={cilSun} size="lg" />
+                {t('theme.light')}
               </CDropdownItem>
-              <CDropdownItem active={colorMode === 'dark'} onClick={() => setColorMode('dark')}>
-                <CIcon className="me-2" icon={cilMoon} size="lg" /> {t('theme.dark')}
+              <CDropdownItem
+                active={colorMode === 'dark'}
+                onClick={() => setColorMode('dark')}
+              >
+                <CIcon className="me-2" icon={cilMoon} size="lg" />
+                {t('theme.dark')}
               </CDropdownItem>
-              <CDropdownItem active={colorMode === 'auto'} onClick={() => setColorMode('auto')}>
-                <CIcon className="me-2" icon={cilContrast} size="lg" /> {t('theme.auto')}
+              <CDropdownItem
+                active={colorMode === 'auto'}
+                onClick={() => setColorMode('auto')}
+              >
+                <CIcon className="me-2" icon={cilContrast} size="lg" />
+                {t('theme.auto')}
+              </CDropdownItem>
+            </CDropdownMenu>
+          </CDropdown>
+
+          {/* Language switcher */}
+          <CDropdown variant="nav-item" placement="bottom-end">
+            <CDropdownToggle caret={false}>
+              <span
+                style={{
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  minWidth: 28,
+                  display: 'inline-block',
+                  textAlign: 'center',
+                }}
+              >
+                {i18n.language?.toUpperCase()}
+              </span>
+            </CDropdownToggle>
+            <CDropdownMenu>
+              <CDropdownItem
+                active={i18n.language === 'ru'}
+                onClick={() => changeLanguage('ru')}
+              >
+                Русский
+              </CDropdownItem>
+              <CDropdownItem
+                active={i18n.language === 'en'}
+                onClick={() => changeLanguage('en')}
+              >
+                English
+              </CDropdownItem>
+              <CDropdownItem
+                active={i18n.language === 'tj'}
+                onClick={() => changeLanguage('tj')}
+              >
+                Тоҷикӣ
               </CDropdownItem>
             </CDropdownMenu>
           </CDropdown>
@@ -110,10 +186,12 @@ const AppHeader = () => {
             <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
           </li>
 
+          {/* User profile dropdown */}
           <AppHeaderDropdown />
         </CHeaderNav>
       </CContainer>
 
+      {/* Breadcrumb */}
       <CContainer className="px-4" fluid>
         <AppBreadcrumb />
       </CContainer>
