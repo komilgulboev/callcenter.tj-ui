@@ -1,40 +1,51 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react";
 
-export function useMonitorSocket(token) {
-  const [agents, setAgents] = useState([])
+export function useMonitorSocket() {
+  const [agents, setAgents] = useState({});
+  const [calls, setCalls] = useState({});
+  const wsRef = useRef(null);
 
   useEffect(() => {
-    if (!token) return
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
+
+    // ❗ BACKEND PORT
+    const WS_BASE = import.meta.env.VITE_WS_URL || "ws://localhost:8080";
 
     const ws = new WebSocket(
-      `ws://localhost:8080/ws/monitor?token=${token}`
-    )
+      `${WS_BASE}/ws/monitor?token=${encodeURIComponent(token)}`
+    );
 
-    ws.onmessage = (e) => {
- 
+    wsRef.current = ws;
 
-      const msg = JSON.parse(e.data);
-  console.log("📡 WS MESSAGE:", msg); // 🔥 ОБЯЗАТЕЛЬНО
+    ws.onopen = () => {
+      console.log("🟢 WS connected");
+    };
 
-  if (msg.type === "snapshot") {
-    setAgents(msg.data || []);
-  }
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === "snapshot") {
+          setAgents(msg.agents || {});
+          setCalls(msg.calls || {});
+        }
+      } catch (e) {
+        console.error("WS parse error", e);
+      }
+    };
 
-  if (msg.type === "update") {
-    setAgents((prev = []) => {
-      const map = new Map(prev.map(a => [a.exten, a]));
-      map.set(msg.data.exten, msg.data);
-      return Array.from(map.values());
-    });
-  }
-    }
+    ws.onclose = () => {
+      console.log("🔴 WS disconnected");
+    };
 
     ws.onerror = (e) => {
-      console.error("WS ERROR", e)
-    }
+      console.error("WS error", e);
+    };
 
-    return () => ws.close()
-  }, [token])
+    return () => {
+      ws.close();
+    };
+  }, []);
 
-  return agents
+  return { agents, calls };
 }
