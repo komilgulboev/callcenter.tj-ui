@@ -1,51 +1,45 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 export function useMonitorSocket() {
   const [agents, setAgents] = useState({});
   const [calls, setCalls] = useState({});
-  const wsRef = useRef(null);
+  const [queues, setQueues] = useState({});
+  const [agentsInfo, setAgentsInfo] = useState({});  // ← ДОБАВИТЬ
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
-    if (!token) return;
-
-    // ❗ BACKEND PORT
-    const WS_BASE = import.meta.env.VITE_WS_URL || "ws://localhost:8080";
-
-    const ws = new WebSocket(
-      `${WS_BASE}/ws/monitor?token=${encodeURIComponent(token)}`
-    );
-
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      console.log("🟢 WS connected");
-    };
+    const ws = new WebSocket(`ws://localhost:8080/ws/monitor?token=${token}`);
 
     ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.type === "snapshot") {
-          setAgents(msg.agents || {});
-          setCalls(msg.calls || {});
-        }
-      } catch (e) {
-        console.error("WS parse error", e);
+      const data = JSON.parse(event.data);
+      if (data.type === "snapshot") {
+        setAgents(data.agents || {});
+        setCalls(data.calls || {});
+        setQueues(data.queues || {});
       }
     };
 
-    ws.onclose = () => {
-      console.log("🔴 WS disconnected");
-    };
+    // ← ДОБАВИТЬ: Загрузка информации об агентах
+    fetch("http://localhost:8080/api/agents/info", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const infoMap = {};
+        (data.agents || []).forEach((agent) => {
+          infoMap[agent.username] = {
+            firstName: agent.firstName,
+            lastName: agent.lastName,
+          };
+        });
+        setAgentsInfo(infoMap);
+      })
+      .catch((err) => console.error("Failed to load agents info:", err));
 
-    ws.onerror = (e) => {
-      console.error("WS error", e);
-    };
-
-    return () => {
-      ws.close();
-    };
+    return () => ws.close();
   }, []);
 
-  return { agents, calls };
+  return { agents, calls, queues, agentsInfo };  // ← ДОБАВИТЬ agentsInfo
 }

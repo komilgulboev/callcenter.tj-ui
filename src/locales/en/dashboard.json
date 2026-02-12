@@ -1,0 +1,19 @@
+{
+  "queueStatistics": "Queue Statistics",
+  "queue": "Queue",
+  "agents": "Agents",
+  "inCall": "In Call",
+  "waiting": "Waiting",
+  "sla": "SLA",
+  "agentsMonitor": "Agents Monitor",
+  "agent": "Agent",
+  "status": "Status",
+  "call": "Call",
+  "actions": "Actions",
+  "noAgents": "No agents",
+  "noQueues": "No queues",
+  "pause": "Pause",
+  "unpause": "Unpause",
+  "hangup": "Hangup",
+  "name": "Name"
+}

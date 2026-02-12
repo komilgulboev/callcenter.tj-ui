@@ -13,6 +13,10 @@ import ruCommon from '../locales/ru/common.json'
 import enCommon from '../locales/en/common.json'
 import tjCommon from '../locales/tj/common.json'
 
+import ruDashboard from '../locales/ru/dashboard.json'
+import enDashboard from '../locales/en/dashboard.json'
+import tjDashboard from '../locales/tj/dashboard.json'
+
 const savedLang = localStorage.getItem('lang') || 'ru'
 
 i18n
@@ -23,21 +27,25 @@ i18n
         auth: ruAuth,
         menu: ruMenu,
         common: ruCommon,
+        dashboard: ruDashboard,
       },
       en: {
         auth: enAuth,
         menu: enMenu,
         common: enCommon,
+        dashboard: enDashboard,
+        
       },
       tj: {
         auth: tjAuth,
         menu: tjMenu,
         common: tjCommon,
+        dashboard: tjDashboard,
       },
     },
     lng: savedLang,
     fallbackLng: 'en',
-    ns: ['auth', 'menu', 'common'],
+    ns: ['auth', 'menu', 'common', 'dashboard'],
     defaultNS: 'common',
     interpolation: {
       escapeValue: false,
