@@ -2,9 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useMonitorSocket } from "../../hooks/useMonitorSocket";
 import { useTranslation } from "react-i18next";
 
-// =========================
-// API helper
-// =========================
 async function apiAction(path, params) {
   const token = localStorage.getItem("accessToken");
   const qs = new URLSearchParams(params).toString();
@@ -22,28 +19,25 @@ async function apiAction(path, params) {
   }
 }
 
-// =========================
-// DASHBOARD
-// =========================
 export default function Dashboard() {
   const { agents, calls, queues } = useMonitorSocket();
   const [, forceTick] = useState(0);
   const { t } = useTranslation("dashboard");
   
-  // 🔥 ЛОКАЛЬНЫЙ СТЕЙТ для немедленной очистки после Hangup
   const [clearedCalls, setClearedCalls] = useState(new Set());
-  
-  // 👤 СТЕЙТ для информации об агентах (имя, фамилия)
   const [agentsInfo, setAgentsInfo] = useState({});
 
-  // ⏱ обновляем таймер раз в секунду
   useEffect(() => {
     const t = setInterval(() => forceTick(v => v + 1), 1000);
     return () => clearInterval(t);
   }, []);
 
-  // 👤 Загружаем информацию об агентах (имя, фамилия)
   useEffect(() => {
+    const agentKeys = Object.keys(agents || {});
+    
+    if (agentKeys.length === 0) return;
+    if (agentKeys.every(key => agentsInfo[key])) return;
+    
     const token = localStorage.getItem("accessToken");
     
     fetch("http://localhost:8080/api/agents/info", {
@@ -52,41 +46,31 @@ export default function Dashboard() {
       },
     })
       .then((res) => {
-        if (!res.ok) throw new Error("Failed to load agents info");
+        if (!res.ok) {
+          console.error("❌ Failed to load agents info, status:", res.status);
+          throw new Error("Failed to load agents info");
+        }
         return res.json();
       })
       .then((data) => {
         const infoMap = {};
         (data.agents || []).forEach((agent) => {
-          infoMap[agent.username] = {
+          infoMap[agent.sipno] = {
             firstName: agent.firstName || "",
             lastName: agent.lastName || "",
           };
         });
         setAgentsInfo(infoMap);
-        console.log("👤 Agents info loaded:", infoMap);
       })
       .catch((err) => {
         console.error("❌ Failed to load agents info:", err);
       });
-  }, []); // Загружаем один раз при монтировании
+  }, [agents]);
 
-  // 🔍 Логируем calls для отладки
-  useEffect(() => {
-    if (calls && Object.keys(calls).length > 0) {
-      console.log("📞 CALLS from WebSocket:", calls);
-      Object.entries(calls).forEach(([id, call]) => {
-        console.log(`  - Call ID: ${id}`, call);
-      });
-    }
-  }, [calls]);
-
-  // 🧹 Очищаем clearedCalls когда звонки обновляются от WebSocket
   useEffect(() => {
     if (calls) {
       setClearedCalls(prev => {
         const newSet = new Set(prev);
-        // Удаляем из очищенных те, которые уже исчезли из WebSocket
         prev.forEach(callId => {
           if (!calls[callId]) {
             newSet.delete(callId);
@@ -100,16 +84,31 @@ export default function Dashboard() {
   const agentList = Object.values(agents || {});
   const callsMap = calls || {};
   const queueList = Object.values(queues || {});
-  const mainQueue = queueList[0]; // 1 tenant = 1 queue
+  const mainQueue = queueList[0];
 
-  // 🔥 ФУНКЦИЯ HANGUP с локальной очисткой
+  const totalAgents = agentList.length;
+  const onlineAgents = agentList.filter(a => a.status !== 'offline').length;
+  const pausedAgents = agentList.filter(a => a.status === 'paused').length;
+  
+  const inCallAgents = agentList.filter(a => {
+    if (a.status !== 'in-call' && a.status !== 'ringing') return false;
+    if (!a.callId) return false;
+    return callsMap[a.callId] && !clearedCalls.has(a.callId);
+  }).length;
+  
+  const availableAgents = agentList.filter(a => 
+    a.status === 'idle' || (a.status === 'ringing' && !callsMap[a.callId])
+  ).length;
+
+  const waitingCalls = Object.values(callsMap).filter(call => {
+    if (clearedCalls.has(call.id)) return false;
+    const hasAgentHandling = agentList.some(agent => 
+      agent.callId === call.id && (agent.status === 'ringing' || agent.status === 'in-call')
+    );
+    return !hasAgentHandling;
+  });
+
   const handleHangup = async (agent, call) => {
-    console.log("🔍 HANGUP CLICK:");
-    console.log("  Agent:", agent.name);
-    console.log("  Agent callId:", agent.callId);
-    console.log("  Call object:", call);
-    console.log("  Call ID from object:", call?.id);
-    
     const callIdToUse = call?.id || agent.callId;
     
     if (!callIdToUse) {
@@ -118,16 +117,9 @@ export default function Dashboard() {
       return;
     }
     
-    console.log("  Using callId:", callIdToUse);
-    
     try {
       await apiAction("/api/actions/hangup", { callId: callIdToUse });
-      console.log("✅ Hangup successful");
-      
-      // 🔥 НЕМЕДЛЕННО помечаем звонок как завершённый
       setClearedCalls(prev => new Set(prev).add(callIdToUse));
-      console.log("🧹 Call marked as cleared:", callIdToUse);
-      
     } catch (err) {
       console.error("❌ Hangup failed:", err);
       alert(`Hangup failed: ${err.message}`);
@@ -136,39 +128,40 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding: 24 }}>
+      {/* Общая статистика */}
+      <QueueSummary 
+        queue={mainQueue} 
+        totalAgents={totalAgents}
+        onlineAgents={onlineAgents}
+        availableAgents={availableAgents}
+        inCallAgents={inCallAgents}
+        pausedAgents={pausedAgents}
+        waitingCalls={waitingCalls.length}
+      />
 
-      {/* ========================= */}
-      {/* QUEUE SUMMARY */}
-      {/* ========================= */}
-      <QueueSummary queue={mainQueue} agents={agents} />
-
-      {/* ========================= */}
-      {/* QUEUE STATISTICS */}
-      {/* ========================= */}      
-
+      {/* Таблица очередей */}
       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 16 }}>
         <thead>
           <tr>
-            <th style={th}>{t("dashboard:call")}</th>
-            <th style={th}>{t("dashboard:agents")}</th>
-            <th style={th}>{t("dashboard:inCall")}</th>
-            <th style={th}>{t("dashboard:waiting")}</th>
-            <th style={th}>{t("dashboard:sla")}</th>
+            <th style={th}>{t("queue")}</th>
+            <th style={th}>{t("agentsOnline")}</th>
+            <th style={th}>{t("oncall")}</th>
+            <th style={th}>{t("waiting")}</th>
+            <th style={th}>{t("sla")}</th>
           </tr>
         </thead>
-
         <tbody>
           {queueList.length === 0 ? (
             <tr>
-              <td colSpan={5} style={td}>{t("dashboard:noqueue")}</td>
+              <td colSpan={5} style={td}>{t("noqueues")}</td>
             </tr>
           ) : (
             queueList.map(q => (
               <tr key={q.name}>
                 <td style={td}>{q.name}</td>
-                <td style={td}>{q.agents}</td>
-                <td style={td}>{q.inCall}</td>
-                <td style={td}>{q.waiting}</td>
+                <td style={td}>{onlineAgents}</td>
+                <td style={td}>{inCallAgents}</td>
+                <td style={td}>{waitingCalls.length}</td>
                 <td style={td}>{(q.sla * 100).toFixed(1)}%</td>
               </tr>
             ))
@@ -176,78 +169,106 @@ export default function Dashboard() {
         </tbody>
       </table>
 
-      {/* ========================= */}
-      {/* AGENTS */}
-      {/* ========================= */}
-      
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 16 }}>
+      {/* Таблица ожидающих звонков */}
+      {waitingCalls.length > 0 && (
+        <>
+          <h3 style={{ marginTop: 24, marginBottom: 12 }}>
+            📞 {t("waitingCalls")} ({waitingCalls.length})
+          </h3>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={th}>{t("phoneNumber")}</th>
+                <th style={th}>{t("callStatus")}</th>
+                <th style={th}>{t("queue")}</th>
+                <th style={th}>{t("customerInfo")}</th>
+                <th style={th}>{t("waitTime")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {waitingCalls.map(call => (
+                <tr key={call.id}>
+                  <td style={td}>
+                    <strong>{call.from}</strong>
+                  </td>
+                  <td style={td}>
+                    <span style={{
+                      padding: "4px 8px",
+                      borderRadius: 6,
+                      background: "#fb8c00",
+                      color: "#fff",
+                      fontSize: 12,
+                    }}>
+                      {t("inWaiting")}
+                    </span>
+                  </td>
+                  <td style={td}>{call.to}</td>
+                  <td style={td}>-</td>
+                  <td style={td}>
+                    {formatWaitTime(call.startedAt)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {/* Таблица агентов */}
+      <h3 style={{ marginTop: 24, marginBottom: 12 }}>👥 {t("agents")}</h3>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
-            <th style={th}>{t("dashboard:agents")}</th>
-            <th style={th}>{t("dashboard:name")}</th>  {/* 👤 НОВАЯ КОЛОНКА */}
-            <th style={th}>{t("dashboard:status")}</th>
-            <th style={th}>{t("dashboard:call")}</th>
-            <th style={th}>{t("dashboard:actions")}</th>
+            <th style={th}>{t("agent")}</th>
+            <th style={th}>{t("name")}</th>
+            <th style={th}>{t("ip")}</th>
+            <th style={th}>{t("status")}</th>
+            <th style={th}>{t("call")}</th>
+            <th style={th}>{t("actions")}</th>
           </tr>
         </thead>
-
         <tbody>
           {agentList.length === 0 ? (
             <tr>
-              <td colSpan={5} style={td}>No agents</td>
+              <td colSpan={6} style={td}>{t("noagents")}</td>
             </tr>
           ) : (
             agentList.map(a => {
-              // 👤 Получаем информацию об агенте
               const info = agentsInfo[a.name] || {};
               const fullName = info.firstName && info.lastName
                 ? `${info.firstName} ${info.lastName}`
                 : info.firstName || info.lastName || "-";
               
-              // 🔥 Игнорируем звонки которые мы уже завершили
               const isCallCleared = a.callId && clearedCalls.has(a.callId);
-              
-              const call =
-                a.callId && callsMap?.[a.callId] && !isCallCleared
-                  ? callsMap[a.callId]
-                  : null;
+              const callExists = a.callId && callsMap[a.callId];
+              const call = callExists && !isCallCleared ? callsMap[a.callId] : null;
 
-              // 🔥 ЛЕЧИМ ЗАЛИПШИЙ in-call
               let safeStatus = a.status;
-              if (a.status === "in-call" && (!call || isCallCleared)) {
+              if ((a.status === "in-call" || a.status === "ringing") && !call) {
                 safeStatus = "idle";
               }
 
-              const duration =
-                call?.startedAt
-                  ? formatDuration(call.startedAt)
-                  : "";
+              const duration = call?.startedAt ? formatDuration(call.startedAt) : "";
 
               return (
                 <tr key={a.name}>
                   <td style={td}>{a.name}</td>
-                  <td style={td}>{fullName}</td>  {/* 👤 ИМЯ И ФАМИЛИЯ */}
-
+                  <td style={td}>{fullName}</td>
+                  <td style={td}>{a.ipAddress || "-"}</td>
                   <td style={td}>
-                    <StatusBadge status={safeStatus} />
+                    <StatusBadge status={safeStatus} t={t} />
                   </td>
-
                   <td style={td}>
                     {call
                       ? `${call.from} → ${call.to} (${duration})`
-                      : isCallCleared
-                        ? "-"
-                        : a.callId 
-                          ? `Call ID: ${a.callId}`
-                          : "-"}
+                      : "-"}
                   </td>
-
                   <td style={td}>
                     <Actions 
                       agent={a} 
                       call={call} 
                       onHangup={handleHangup}
-                      isCallCleared={isCallCleared}
+                      safeStatus={safeStatus}
                     />
                   </td>
                 </tr>
@@ -260,22 +281,17 @@ export default function Dashboard() {
   );
 }
 
-// =========================
-// QUEUE SUMMARY
-// =========================
-function QueueSummary({ queue, agents }) {
+function QueueSummary({ 
+  queue, 
+  totalAgents, 
+  onlineAgents,
+  availableAgents, 
+  inCallAgents, 
+  pausedAgents,
+  waitingCalls 
+}) {
   const { t } = useTranslation("dashboard");
-
   if (!queue) return null;
-
-  let paused = 0;
-  Object.values(agents || {}).forEach(a => {
-    if (a.status === "paused") paused++;
-  });
-
-  const total = queue.agents || 0;
-  const inCall = queue.inCall || 0;
-  const available = Math.max(total - inCall - paused, 0);
 
   return (
     <div style={{
@@ -289,50 +305,38 @@ function QueueSummary({ queue, agents }) {
       color: "var(--text-color, inherit)",
     }}>
       <strong>📞 {t("queue")} {queue.name}</strong>
-      <span>👥 {total}</span>
-      <span style={{ color: "#43a047" }}>🟢 {available}</span>
-      <span style={{ color: "#e53935" }}>🔴 {inCall}</span>
-      <span style={{ color: "#1976d2" }}>⏸ {paused}</span>
-
-      {queue.waiting > 0 && (
+      <span>👥 {t("total")}: {totalAgents}</span>
+      <span>🌐 {t("online")}: {onlineAgents}</span>
+      <span style={{ color: "#43a047" }}>🟢 {t("available")}: {availableAgents}</span>
+      <span style={{ color: "#e53935" }}>🔴 {t("oncall")}: {inCallAgents}</span>
+      <span style={{ color: "#1976d2" }}>⏸ {t("pause")}: {pausedAgents}</span>
+      {waitingCalls > 0 && (
         <span style={{ color: "#fb8c00" }}>
-          ⏳ {queue.waiting} {t("waiting")}
+          ⏳ {t("waiting")}: {waitingCalls}
         </span>
       )}
     </div>
   );
 }
 
-
-// =========================
-// ACTIONS
-// =========================
-function Actions({ agent, call, onHangup, isCallCleared }) {
-  const isPaused = agent.status === "paused";
-  const isInCall = agent.status === "in-call" && !isCallCleared;
+function Actions({ agent, call, onHangup, safeStatus }) {
+  const { t } = useTranslation("dashboard");
+  const isPaused = safeStatus === "paused";
+  const isInCall = safeStatus === "in-call" && call;
 
   return (
     <>
-      {/* PAUSE */}
       <IconButton
-        title={isPaused ? "Unpause" : "Pause"}
-        onClick={() =>
-          apiAction("/api/actions/pause", { agent: agent.name })
-        }
+        title={isPaused ? t("unpause") : t("pause")}
+        onClick={() => apiAction("/api/actions/pause", { agent: agent.name })}
       >
         {isPaused ? "🕒" : "⏸"}
       </IconButton>
-
-      {/* ❌ HANGUP */}
       {isInCall && (
-        <IconButton
-          title="Hangup"
-          onClick={() => onHangup(agent, call)}
-        >
+        <IconButton title={t("hangup")} onClick={() => onHangup(agent, call)}>
           ❌
         </IconButton>
       )}
-
     </>
   );
 }
@@ -355,9 +359,6 @@ function IconButton({ children, onClick, title }) {
   );
 }
 
-// =========================
-// HELPERS
-// =========================
 function formatDuration(startedAt) {
   const sec = Math.floor((Date.now() - new Date(startedAt)) / 1000);
   const mm = String(Math.floor(sec / 60)).padStart(2, "0");
@@ -365,7 +366,17 @@ function formatDuration(startedAt) {
   return `${mm}:${ss}`;
 }
 
-function StatusBadge({ status }) {
+function formatWaitTime(startedAt) {
+  const sec = Math.floor((Date.now() - new Date(startedAt)) / 1000);
+  if (sec < 60) {
+    return `${sec}с`;
+  }
+  const mins = Math.floor(sec / 60);
+  const secs = sec % 60;
+  return `${mins}м ${secs}с`;
+}
+
+function StatusBadge({ status, t }) {
   const colors = {
     "in-call": "#e53935",
     ringing: "#fb8c00",
@@ -373,6 +384,17 @@ function StatusBadge({ status }) {
     offline: "#757575",
     paused: "#1976d2",
   };
+
+  // Мапинг статусов на ключи переводов
+  const statusKeys = {
+    "idle": "statusIdle",
+    "in-call": "statusInCall",
+    "ringing": "statusRinging",
+    "offline": "statusOffline",
+    "paused": "statusPaused",
+  };
+
+  const translationKey = statusKeys[status] || "statusIdle";
 
   return (
     <span
@@ -385,16 +407,12 @@ function StatusBadge({ status }) {
         minWidth: 70,
         display: "inline-block",
         textAlign: "center",
-        textTransform: "capitalize",
       }}
     >
-      {status}
+      {t(translationKey)}
     </span>
   );
 }
 
-// =========================
-// STYLES
-// =========================
 const th = { borderBottom: "1px solid #ddd", padding: 8 };
 const td = { borderBottom: "1px solid #eee", padding: 8 };

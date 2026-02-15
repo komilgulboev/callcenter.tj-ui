@@ -4,42 +4,77 @@ export function useMonitorSocket() {
   const [agents, setAgents] = useState({});
   const [calls, setCalls] = useState({});
   const [queues, setQueues] = useState({});
-  const [agentsInfo, setAgentsInfo] = useState({});  // ← ДОБАВИТЬ
 
   useEffect(() => {
+    console.log("🔌 useMonitorSocket: Initializing WebSocket...");
+    
     const token = localStorage.getItem("accessToken");
-    const ws = new WebSocket(`ws://localhost:8080/ws/monitor?token=${token}`);
+    console.log("🔑 Token exists:", !!token);
+    console.log("🔑 Token (first 20 chars):", token?.substring(0, 20));
+    
+    if (!token) {
+      console.error("❌ No access token found in localStorage!");
+      return;
+    }
+
+    const wsUrl = `ws://localhost:8080/ws/monitor?token=${token}`;
+    console.log("🔌 WebSocket URL:", wsUrl);
+    
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log("🟢 WS connected");
+    };
 
     ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "snapshot") {
-        setAgents(data.agents || {});
-        setCalls(data.calls || {});
-        setQueues(data.queues || {});
+      console.log("📨 WS message received:", event.data);
+      
+      try {
+        const data = JSON.parse(event.data);
+        console.log("📦 WS parsed data:", data);
+        console.log("📦 Data type:", data.type);
+        console.log("📦 Agents in data:", data.agents);
+        console.log("📦 Calls in data:", data.calls);
+        console.log("📦 Queues in data:", data.queues);
+        
+        if (data.type === "snapshot") {
+          console.log("✅ Setting agents:", data.agents);
+          console.log("✅ Setting calls:", data.calls);
+          console.log("✅ Setting queues:", data.queues);
+          
+          setAgents(data.agents || {});
+          setCalls(data.calls || {});
+          setQueues(data.queues || {});
+          
+          console.log("✅ State updated!");
+        } else {
+          console.warn("⚠️ Unknown message type:", data.type);
+        }
+      } catch (err) {
+        console.error("❌ Failed to parse WS message:", err);
+        console.error("❌ Raw message:", event.data);
       }
     };
 
-    // ← ДОБАВИТЬ: Загрузка информации об агентах
-    fetch("http://localhost:8080/api/agents/info", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        const infoMap = {};
-        (data.agents || []).forEach((agent) => {
-          infoMap[agent.username] = {
-            firstName: agent.firstName,
-            lastName: agent.lastName,
-          };
-        });
-        setAgentsInfo(infoMap);
-      })
-      .catch((err) => console.error("Failed to load agents info:", err));
+    ws.onerror = (error) => {
+      console.error("❌ WS error:", error);
+      console.error("❌ WS readyState:", ws.readyState);
+    };
 
-    return () => ws.close();
+    ws.onclose = (event) => {
+      console.log("🔴 WS closed");
+      console.log("🔴 Close code:", event.code);
+      console.log("🔴 Close reason:", event.reason);
+      console.log("🔴 Was clean:", event.wasClean);
+    };
+
+    return () => {
+      console.log("🔌 Cleaning up WebSocket...");
+      ws.close();
+    };
   }, []);
 
-  return { agents, calls, queues, agentsInfo };  // ← ДОБАВИТЬ agentsInfo
+
+
+  return { agents, calls, queues };
 }
