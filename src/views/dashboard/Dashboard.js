@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useMonitorSocket } from "../../hooks/useMonitorSocket";
 import { useTranslation } from "react-i18next";
+import { useTokenCheck } from "../../hooks/useTokenCheck";
 
 async function apiAction(path, params) {
   const token = localStorage.getItem("accessToken");
@@ -20,6 +21,9 @@ async function apiAction(path, params) {
 }
 
 export default function Dashboard() {
+  // Автоматическая проверка токена каждую минуту
+  useTokenCheck();
+  
   const { agents, calls, queues } = useMonitorSocket();
   const [, forceTick] = useState(0);
   const { t } = useTranslation("dashboard");
@@ -385,7 +389,6 @@ function StatusBadge({ status, t }) {
     paused: "#1976d2",
   };
 
-  // Мапинг статусов на ключи переводов
   const statusKeys = {
     "idle": "statusIdle",
     "in-call": "statusInCall",

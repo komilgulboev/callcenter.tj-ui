@@ -41,10 +41,14 @@ const Login = () => {
     setLoading(true)
 
     try {
+      // Выполняем логин и получаем токен
       await login(username, password)
       await me()
-      navigate('/')
-    } catch {
+      
+      // Редирект на dashboard
+      navigate('/dashboard')
+    } catch (err) {
+      console.error('Login error:', err)
       setError(t('error.invalid'))
     } finally {
       setLoading(false)
@@ -60,7 +64,7 @@ const Login = () => {
               <CCard className="p-4">
                 <CCardBody>
 
-                  {/* language selector – аккуратно, без влияния на дизайн */}
+                  {/* language selector */}
                   <div className="text-end mb-2">
                     <select
                       value={i18n.language}
@@ -138,7 +142,7 @@ const Login = () => {
                 </CCardBody>
               </CCard>
 
-              {/* ВТОРОЙ КАРД — БЕЗ ИЗМЕНЕНИЙ ПО ДИЗАЙНУ */}
+              {/* Правая панель */}
               <CCard className="text-white bg-primary py-5" style={{ width: '44%' }}>
                 <CCardBody className="text-center">
                   <div>
