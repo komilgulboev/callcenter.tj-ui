@@ -2,16 +2,15 @@ import React, { useEffect, useState } from "react";
 import { useMonitorSocket } from "../../hooks/useMonitorSocket";
 import { useTranslation } from "react-i18next";
 import { useTokenCheck } from "../../hooks/useTokenCheck";
+import { getApiUrl, getAuthHeaders, API_CONFIG } from "../../api";
+import { getUserQueue } from "../../utils/tokenUtils";
 
-async function apiAction(path, params) {
-  const token = localStorage.getItem("accessToken");
-  const qs = new URLSearchParams(params).toString();
-
-  const res = await fetch(`http://localhost:8080${path}?${qs}`, {
+async function apiAction(endpoint, params) {
+  const url = `${getApiUrl(endpoint)}?${new URLSearchParams(params).toString()}`;
+  
+  const res = await fetch(url, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: getAuthHeaders(),
   });
 
   if (!res.ok) {
@@ -21,7 +20,6 @@ async function apiAction(path, params) {
 }
 
 export default function Dashboard() {
-  // Автоматическая проверка токена каждую минуту
   useTokenCheck();
   
   const { agents, calls, queues } = useMonitorSocket();
@@ -30,6 +28,10 @@ export default function Dashboard() {
   
   const [clearedCalls, setClearedCalls] = useState(new Set());
   const [agentsInfo, setAgentsInfo] = useState({});
+
+  // 🔑 Получаем очередь пользователя из токена
+  const userQueue = getUserQueue();
+  console.log("🔑 User queue from token:", userQueue);
 
   useEffect(() => {
     const t = setInterval(() => forceTick(v => v + 1), 1000);
@@ -42,12 +44,8 @@ export default function Dashboard() {
     if (agentKeys.length === 0) return;
     if (agentKeys.every(key => agentsInfo[key])) return;
     
-    const token = localStorage.getItem("accessToken");
-    
-    fetch("http://localhost:8080/api/agents/info", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    fetch(getApiUrl(API_CONFIG.ENDPOINTS.AGENTS_INFO), {
+      headers: getAuthHeaders(),
     })
       .then((res) => {
         if (!res.ok) {
@@ -69,7 +67,7 @@ export default function Dashboard() {
       .catch((err) => {
         console.error("❌ Failed to load agents info:", err);
       });
-  }, [agents]);
+  }, [agents, agentsInfo]);
 
   useEffect(() => {
     if (calls) {
@@ -88,7 +86,14 @@ export default function Dashboard() {
   const agentList = Object.values(agents || {});
   const callsMap = calls || {};
   const queueList = Object.values(queues || {});
-  const mainQueue = queueList[0];
+  
+  // 🔑 Фильтруем только очередь пользователя
+  const mainQueue = userQueue 
+    ? queueList.find(q => q.name === userQueue)
+    : queueList[0];
+  
+  console.log("📋 All queues:", queueList.map(q => q.name));
+  console.log("✅ User's queue:", mainQueue?.name);
 
   const totalAgents = agentList.length;
   const onlineAgents = agentList.filter(a => a.status !== 'offline').length;
@@ -104,13 +109,87 @@ export default function Dashboard() {
     a.status === 'idle' || (a.status === 'ringing' && !callsMap[a.callId])
   ).length;
 
+  // 🔍 ФИЛЬТРАЦИЯ: Только звонки в очереди пользователя
   const waitingCalls = Object.values(callsMap).filter(call => {
-    if (clearedCalls.has(call.id)) return false;
-    const hasAgentHandling = agentList.some(agent => 
-      agent.callId === call.id && (agent.status === 'ringing' || agent.status === 'in-call')
+    // 1. Пропускаем завершённые звонки
+    if (clearedCalls.has(call.id)) {
+      console.log(`🔍 Call ${call.id} is in clearedCalls, skipping`);
+      return false;
+    }
+    
+    // 2. ВАЖНО: Фильтруем по очереди пользователя!
+    if (userQueue && call.to !== userQueue) {
+      console.log(`🚫 Call ${call.id} is for queue ${call.to}, not our queue ${userQueue}`);
+      return false;
+    }
+    
+    // 3. ✅ ИСПРАВЛЕНО: Убираем звонок ТОЛЬКО когда агент ОТВЕТИЛ (in-call)
+    //    НЕ убираем когда агент звонит (ringing) - абонент всё ещё ждёт!
+    const isAnswered = agentList.some(agent => {
+      const answered = agent.callId === call.id && agent.status === 'in-call';
+      if (answered) {
+        console.log(`✅ Call ${call.id} ANSWERED by agent ${agent.name}`);
+      }
+      return answered;
+    });
+    
+    // Проверяем какому агенту звонит (для отображения)
+    const ringingAgent = agentList.find(agent => 
+      agent.callId === call.id && agent.status === 'ringing'
     );
-    return !hasAgentHandling;
+    
+    if (ringingAgent) {
+      console.log(`📞 Call ${call.id} is RINGING to agent ${ringingAgent.name}`);
+    } else if (!isAnswered) {
+      console.log(`⏳ Call ${call.id} from ${call.from} is WAITING in queue ${call.to}`);
+    }
+    
+    return !isAnswered; // Показываем пока не ответили
   });
+
+  // 🧹 Периодическая очистка "мёртвых" звонков (каждые 3 секунды)
+  // ВАЖНО: Должна быть ПОСЛЕ объявления agentList!
+  useEffect(() => {
+    const cleanupInterval = setInterval(() => {
+      if (!calls || Object.keys(calls).length === 0) return;
+      
+      const now = Date.now();
+      const STALE_THRESHOLD = 30000; // 30 секунд
+      
+      setClearedCalls(prev => {
+        const newSet = new Set(prev);
+        let hasChanges = false;
+        
+        Object.values(calls).forEach(call => {
+          // Если звонок старше 30 секунд и агент в idle - удаляем
+          const callAge = now - new Date(call.startedAt).getTime();
+          const hasActiveAgent = agentList.some(agent => 
+            agent.callId === call.id && 
+            (agent.status === 'ringing' || agent.status === 'in-call')
+          );
+          
+          if (callAge > STALE_THRESHOLD && !hasActiveAgent) {
+            console.log(`🧹 Cleaning stale call ${call.id} (age: ${Math.floor(callAge/1000)}s)`);
+            newSet.add(call.id);
+            hasChanges = true;
+          }
+        });
+        
+        return hasChanges ? newSet : prev;
+      });
+    }, 3000); // Проверяем каждые 3 секунды
+    
+    return () => clearInterval(cleanupInterval);
+  }, [calls, agentList]);
+
+  // 🔍 ОТЛАДКА: Логируем все звонки
+  useEffect(() => {
+    if (Object.keys(callsMap).length > 0) {
+      console.log("📞 ALL CALLS:", callsMap);
+      console.log("👥 ALL AGENTS:", agentList);
+      console.log("⏳ WAITING CALLS:", waitingCalls);
+    }
+  }, [callsMap, agentList]);
 
   const handleHangup = async (agent, call) => {
     const callIdToUse = call?.id || agent.callId;
@@ -122,7 +201,7 @@ export default function Dashboard() {
     }
     
     try {
-      await apiAction("/api/actions/hangup", { callId: callIdToUse });
+      await apiAction(API_CONFIG.ENDPOINTS.ACTIONS_HANGUP, { callId: callIdToUse });
       setClearedCalls(prev => new Set(prev).add(callIdToUse));
     } catch (err) {
       console.error("❌ Hangup failed:", err);
@@ -155,42 +234,60 @@ export default function Dashboard() {
           </tr>
         </thead>
         <tbody>
-          {queueList.length === 0 ? (
+          {!mainQueue ? (
             <tr>
               <td colSpan={5} style={td}>{t("noqueues")}</td>
             </tr>
           ) : (
-            queueList.map(q => (
-              <tr key={q.name}>
-                <td style={td}>{q.name}</td>
-                <td style={td}>{onlineAgents}</td>
-                <td style={td}>{inCallAgents}</td>
-                <td style={td}>{waitingCalls.length}</td>
-                <td style={td}>{(q.sla * 100).toFixed(1)}%</td>
-              </tr>
-            ))
+            <tr key={mainQueue.name}>
+              <td style={td}>{mainQueue.name}</td>
+              <td style={td}>{onlineAgents}</td>
+              <td style={td}>{inCallAgents}</td>
+              <td style={td}>{waitingCalls.length}</td>
+              <td style={td}>{(mainQueue.sla * 100).toFixed(1)}%</td>
+            </tr>
           )}
         </tbody>
       </table>
 
-      {/* Таблица ожидающих звонков */}
-      {waitingCalls.length > 0 && (
-        <>
-          <h3 style={{ marginTop: 24, marginBottom: 12 }}>
-            📞 {t("waitingCalls")} ({waitingCalls.length})
-          </h3>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th style={th}>{t("phoneNumber")}</th>
-                <th style={th}>{t("callStatus")}</th>
-                <th style={th}>{t("queue")}</th>
-                <th style={th}>{t("customerInfo")}</th>
-                <th style={th}>{t("waitTime")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {waitingCalls.map(call => (
+      {/* ✅ ТАБЛИЦА ЗВОНКОВ В ОЧЕРЕДИ */}
+      <h5 style={{ marginTop: 24, marginBottom: 12 }}>
+        📞 {t("waitingCalls")} ({waitingCalls.length})
+      </h5>
+      
+      {waitingCalls.length === 0 ? (
+        <div style={{ padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
+          <p>Нет ожидающих звонков</p>
+        </div>
+      ) : (
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              <th style={th}>{t("phoneNumber")}</th>
+              <th style={th}>{t("callStatus")}</th>
+              <th style={th}>{t("queue")}</th>
+              <th style={th}>Агент</th>
+              <th style={th}>{t("waitTime")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {waitingCalls.map(call => {
+              // Находим агента которому звонит
+              const ringingAgent = agentList.find(agent => 
+                agent.callId === call.id && agent.status === 'ringing'
+              );
+              
+              const info = ringingAgent ? agentsInfo[ringingAgent.name] || {} : {};
+              const agentName = ringingAgent 
+                ? (info.firstName && info.lastName
+                    ? `${info.firstName} ${info.lastName}`
+                    : info.firstName || info.lastName || ringingAgent.name)
+                : "-";
+              
+              const statusText = ringingAgent ? "Звонит агенту" : t("inWaiting");
+              const statusColor = ringingAgent ? "#1976d2" : "#fb8c00";
+              
+              return (
                 <tr key={call.id}>
                   <td style={td}>
                     <strong>{call.from}</strong>
@@ -199,27 +296,27 @@ export default function Dashboard() {
                     <span style={{
                       padding: "4px 8px",
                       borderRadius: 6,
-                      background: "#fb8c00",
+                      background: statusColor,
                       color: "#fff",
                       fontSize: 12,
                     }}>
-                      {t("inWaiting")}
+                      {statusText}
                     </span>
                   </td>
                   <td style={td}>{call.to}</td>
-                  <td style={td}>-</td>
+                  <td style={td}>{agentName}</td>
                   <td style={td}>
                     {formatWaitTime(call.startedAt)}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
+              );
+            })}
+          </tbody>
+        </table>
       )}
 
       {/* Таблица агентов */}
-      <h3 style={{ marginTop: 24, marginBottom: 12 }}>👥 {t("agents")}</h3>
+      <h5 style={{ marginTop: 24, marginBottom: 12 }}>👥 {t("agents")}</h5>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
@@ -332,7 +429,7 @@ function Actions({ agent, call, onHangup, safeStatus }) {
     <>
       <IconButton
         title={isPaused ? t("unpause") : t("pause")}
-        onClick={() => apiAction("/api/actions/pause", { agent: agent.name })}
+        onClick={() => apiAction(API_CONFIG.ENDPOINTS.ACTIONS_PAUSE, { agent: agent.name })}
       >
         {isPaused ? "🕒" : "⏸"}
       </IconButton>

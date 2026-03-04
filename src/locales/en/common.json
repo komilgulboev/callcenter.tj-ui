@@ -9,5 +9,10 @@
     "light": "Light",
     "dark": "Dark",
     "auto": "Auto"
-  }
+  },
+  "staff": "Staff",
+  "reports": "Reports",
+  "calls": "Calls",
+  "report_calls": "Calls",
+  "report_by_staff": "By staff"
 }

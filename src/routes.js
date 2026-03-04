@@ -6,6 +6,12 @@ const Typography = React.lazy(() => import('./views/theme/typography/Typography'
 
 // 🔹 WebPhone
 const WebPhone = React.lazy(() => import('./views/webphone/WebPhone'))
+// 🔹 Tickets
+const Tickets = React.lazy(() => import('./views/tickets/Tickets'))
+// 🔹 Staff
+const Staff = React.lazy(() => import('./views/staff/Staff'))
+// 🔹 Reports
+const ReportCalls = React.lazy(() => import('./views/reports/report_calls'))
 
 // Base
 const Accordion = React.lazy(() => import('./views/base/accordion/Accordion'))
@@ -60,6 +66,12 @@ const routes = [
 
   // 🔹 WebPhone
   { path: '/webphone', name: 'phone', element: WebPhone },
+  // 🔹 Tickets
+  { path: '/tickets', name: 'tickets', element: Tickets },
+  // 🔹 Staff
+  { path: '/staff', name: 'staff', element: Staff },
+  { path: '/report_calls', name: 'report_calls', element: ReportCalls },
+  { path: '/report_by_staff', name: 'report_by_staff', element: ReportCalls },
 
   { path: '/theme', name: 'Theme', element: Colors, exact: true },
   { path: '/theme/colors', name: 'Colors', element: Colors },

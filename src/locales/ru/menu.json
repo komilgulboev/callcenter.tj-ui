@@ -9,5 +9,7 @@
   "settings": "Настройки",
   "docs": "Документация",
   "extra": "Дополнительно",
-  "tickets": "Заявки"
+  "tickets": "Заявки",
+  "report_calls": "Звонки",
+  "report_by_staff": "По сотрудникам"
 }

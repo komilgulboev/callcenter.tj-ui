@@ -17,6 +17,18 @@ import ruDashboard from '../locales/ru/dashboard.json'
 import enDashboard from '../locales/en/dashboard.json'
 import tjDashboard from '../locales/tj/dashboard.json'
 
+import ruCrm from '../locales/ru/tickets_catalog.json'
+import enCrm from '../locales/en/tickets_catalog.json'
+import tjCrm from '../locales/tj/tickets_catalog.json'
+
+import ruStaff from '../locales/ru/staff.json'
+import enStaff from '../locales/en/staff.json'
+import tjStaff from '../locales/tj/staff.json'
+
+import ruReport from '../locales/ru/report.json'
+import enReport from '../locales/en/report.json'
+import tjReport from '../locales/tj/report.json'
+
 const savedLang = localStorage.getItem('lang') || 'ru'
 
 i18n
@@ -24,28 +36,36 @@ i18n
   .init({
     resources: {
       ru: {
-        auth: ruAuth,
-        menu: ruMenu,
-        common: ruCommon,
+        auth:      ruAuth,
+        menu:      ruMenu,
+        common:    ruCommon,
         dashboard: ruDashboard,
+        crm:       ruCrm,
+        staff:     ruStaff,
+        report:    ruReport,
       },
       en: {
-        auth: enAuth,
-        menu: enMenu,
-        common: enCommon,
+        auth:      enAuth,
+        menu:      enMenu,
+        common:    enCommon,
         dashboard: enDashboard,
-        
+        crm:       enCrm,
+        staff:     enStaff,
+        report:    enReport,
       },
       tj: {
-        auth: tjAuth,
-        menu: tjMenu,
-        common: tjCommon,
+        auth:      tjAuth,
+        menu:      tjMenu,
+        common:    tjCommon,
         dashboard: tjDashboard,
+        crm:       tjCrm,
+        staff:     tjStaff,
+        report:    tjReport,
       },
     },
     lng: savedLang,
-    fallbackLng: 'en',
-    ns: ['auth', 'menu', 'common', 'dashboard'],
+    fallbackLng: 'ru',
+    ns: ['auth', 'menu', 'common', 'dashboard', 'crm', 'staff', 'report'],
     defaultNS: 'common',
     interpolation: {
       escapeValue: false,

@@ -9,5 +9,7 @@
   "settings": "Settings",
   "docs": "Documentation",
   "extra": "Extras",
-  "tickets": "Tickets"
+  "tickets": "Tickets",
+  "report_calls": "Calls",
+  "report_by_staff": "By staff"
 }

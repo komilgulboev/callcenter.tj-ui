@@ -17,18 +17,21 @@ import {
   CAlert,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilLockLocked, cilUser } from '@coreui/icons'
+import { cilLockLocked, cilUser, cilGlobeAlt } from '@coreui/icons'
 
 import { login, me } from '../../../services/auth.service'
+import { getBackendUrl, setBackendUrl } from '../../../api'
 
 const Login = () => {
   const { t, i18n } = useTranslation('auth')
   const navigate = useNavigate()
 
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [username, setUsername]   = useState('')
+  const [password, setPassword]   = useState('')
+  const [backendUrl, setBackendUrlState] = useState(getBackendUrl())
+  const [error, setError]         = useState(null)
+  const [loading, setLoading]     = useState(false)
+  const [showServer, setShowServer] = useState(false)
 
   const changeLang = (lang) => {
     i18n.changeLanguage(lang)
@@ -40,12 +43,14 @@ const Login = () => {
     setError(null)
     setLoading(true)
 
+    // Сохраняем адрес бэкенда перед логином
+    if (backendUrl.trim()) {
+      setBackendUrl(backendUrl.trim())
+    }
+
     try {
-      // Выполняем логин и получаем токен
       await login(username, password)
       await me()
-      
-      // Редирект на dashboard
       navigate('/dashboard')
     } catch (err) {
       console.error('Login error:', err)
@@ -84,16 +89,13 @@ const Login = () => {
 
                   <CForm onSubmit={handleSubmit}>
                     <h1>{t('title')}</h1>
-                    <p className="text-body-secondary">
-                      {t('subtitle')}
-                    </p>
+                    <p className="text-body-secondary">{t('subtitle')}</p>
 
                     {error && (
-                      <CAlert color="danger" className="mb-3">
-                        {error}
-                      </CAlert>
+                      <CAlert color="danger" className="mb-3">{error}</CAlert>
                     )}
 
+                    {/* Username */}
                     <CInputGroup className="mb-3">
                       <CInputGroupText>
                         <CIcon icon={cilUser} />
@@ -107,7 +109,8 @@ const Login = () => {
                       />
                     </CInputGroup>
 
-                    <CInputGroup className="mb-4">
+                    {/* Password */}
+                    <CInputGroup className="mb-3">
                       <CInputGroupText>
                         <CIcon icon={cilLockLocked} />
                       </CInputGroupText>
@@ -120,6 +123,43 @@ const Login = () => {
                         required
                       />
                     </CInputGroup>
+
+                    {/* Server address — раскрывается по кнопке */}
+                    <div className="mb-4">
+                      <div
+                        onClick={() => setShowServer(!showServer)}
+                        style={{
+                          fontSize: '0.8rem',
+                          color: '#6c757d',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          marginBottom: showServer ? 8 : 0,
+                        }}
+                      >
+                        <CIcon icon={cilGlobeAlt} size="sm" />
+                        {t('serverAddress', { defaultValue: 'Адрес сервера' })}:&nbsp;
+                        <span style={{ color: '#495057', fontWeight: 500 }}>
+                          {backendUrl}
+                        </span>
+                        <span style={{ marginLeft: 'auto' }}>{showServer ? '▲' : '▼'}</span>
+                      </div>
+
+                      {showServer && (
+                        <CInputGroup>
+                          <CInputGroupText>
+                            <CIcon icon={cilGlobeAlt} />
+                          </CInputGroupText>
+                          <CFormInput
+                            value={backendUrl}
+                            onChange={(e) => setBackendUrlState(e.target.value)}
+                            placeholder="http://192.168.1.100:8080"
+                          />
+                        </CInputGroup>
+                      )}
+                    </div>
 
                     <CRow>
                       <CCol xs={6}>
