@@ -5,7 +5,19 @@
  */
 
 const STORAGE_KEY = 'backendUrl'
-const DEFAULT_URL = 'http://localhost:8080'
+
+// В dev режиме (Vite) используем VITE_BACKEND_URL если задан
+// В продакшене берём origin
+const DEFAULT_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
+
+// Автоисправление: если сохранён localhost — сбрасываем
+// НО только в продакшене — в dev localhost нужен
+const saved = localStorage.getItem(STORAGE_KEY)
+if (saved && !import.meta.env.DEV) {
+  if (saved.includes('localhost') || saved.includes('127.0.0.1')) {
+    localStorage.removeItem(STORAGE_KEY)
+  }
+}
 
 export function getBackendUrl() {
   return localStorage.getItem(STORAGE_KEY) || DEFAULT_URL

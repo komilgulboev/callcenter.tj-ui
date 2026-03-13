@@ -12,6 +12,8 @@ const Tickets = React.lazy(() => import('./views/tickets/Tickets'))
 const Staff = React.lazy(() => import('./views/staff/Staff'))
 // 🔹 Reports
 const ReportCalls = React.lazy(() => import('./views/reports/report_calls'))
+// 🔹 Companies
+const Companies = React.lazy(() => import('./views/companies/Companies'))
 
 // Base
 const Accordion = React.lazy(() => import('./views/base/accordion/Accordion'))
@@ -63,7 +65,7 @@ const Widgets = React.lazy(() => import('./views/widgets/Widgets'))
 const routes = [
   { path: '/', exact: true, name: 'Home' },
   { path: '/dashboard', name: 'dashboard', element: Dashboard },
-
+{ path: '/companies', name: 'companies', element: Companies },
   // 🔹 WebPhone
   { path: '/webphone', name: 'phone', element: WebPhone },
   // 🔹 Tickets

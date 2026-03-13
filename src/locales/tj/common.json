@@ -14,5 +14,9 @@
   "reports": "Ҳисоботҳо",
   "calls": "Зангҳо",
   "report_calls": "Зангҳо",
-  "report_by_staff": "Аз кормандон"
+  "report_by_staff": "Аз кормандон",
+  "account": "Аккаунт",
+"profile": "Профил",
+"logout": "Баромадан",
+"companies": "Ширкатҳо"
 }

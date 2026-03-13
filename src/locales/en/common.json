@@ -14,5 +14,9 @@
   "reports": "Reports",
   "calls": "Calls",
   "report_calls": "Calls",
-  "report_by_staff": "By staff"
+  "report_by_staff": "By staff",
+  "account": "Account",
+"profile": "Profile", 
+"logout": "Logout",
+"companies": "Companies"
 }

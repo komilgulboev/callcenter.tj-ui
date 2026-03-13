@@ -29,6 +29,10 @@ import ruReport from '../locales/ru/report.json'
 import enReport from '../locales/en/report.json'
 import tjReport from '../locales/tj/report.json'
 
+import ruCompany from '../locales/ru/company.json'
+import enCompany from '../locales/en/company.json'
+import tjCompany from '../locales/tj/company.json'
+
 const savedLang = localStorage.getItem('lang') || 'ru'
 
 i18n
@@ -43,6 +47,7 @@ i18n
         crm:       ruCrm,
         staff:     ruStaff,
         report:    ruReport,
+        company:   ruCompany,
       },
       en: {
         auth:      enAuth,
@@ -52,6 +57,7 @@ i18n
         crm:       enCrm,
         staff:     enStaff,
         report:    enReport,
+        company:   enCompany,
       },
       tj: {
         auth:      tjAuth,
@@ -61,11 +67,12 @@ i18n
         crm:       tjCrm,
         staff:     tjStaff,
         report:    tjReport,
+        company:   tjCompany,
       },
     },
     lng: savedLang,
     fallbackLng: 'ru',
-    ns: ['auth', 'menu', 'common', 'dashboard', 'crm', 'staff', 'report'],
+    ns: ['auth', 'menu', 'common', 'dashboard', 'crm', 'staff', 'report', 'company'],
     defaultNS: 'common',
     interpolation: {
       escapeValue: false,

@@ -1,21 +1,13 @@
 import React from 'react'
 import CIcon from '@coreui/icons-react'
 import {
-  cilBell,
-  cilCalculator,
   cilChartPie,
-  cilCursor,
   cilDescription,
-  cilDrop,
-  cilExternalLink,
   cilMonitor,
   cilNotes,
-  cilPencil,
   cilPeople,
   cilPhone,
-  cilPuzzle,
-  cilSpeedometer,
-  cilStar,
+  cilBuilding,
 } from '@coreui/icons'
 import { CNavGroup, CNavItem, CNavTitle } from '@coreui/react'
 
@@ -26,23 +18,29 @@ const _nav = [
     to: '/webphone',
     icon: <CIcon icon={cilPhone} customClassName="nav-icon" />,
   },
-    {
+  {
     component: CNavItem,
     name: 'monitoring',
     to: '/dashboard',
     icon: <CIcon icon={cilMonitor} customClassName="nav-icon" />,
   },
-     {
+  {
     component: CNavItem,
     name: 'tickets',
     to: '/tickets',
     icon: <CIcon icon={cilNotes} customClassName="nav-icon" />,
   },
-    {
+  {
     component: CNavItem,
     name: 'staff',
     to: '/staff',
     icon: <CIcon icon={cilPeople} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavItem,
+    name: 'companies',
+    to: '/companies',
+    icon: <CIcon icon={cilBuilding} customClassName="nav-icon" />,
   },
   {
     component: CNavGroup,
@@ -60,7 +58,6 @@ const _nav = [
         name: 'report_by_staff',
         to: '/report_by_staff',
       },
-
     ],
   },
 
@@ -68,7 +65,7 @@ const _nav = [
     component: CNavTitle,
     name: 'extra',
   },
-    {
+  {
     component: CNavItem,
     name: 'docs',
     href: 'https://coreui.io/react/docs/templates/installation/',
