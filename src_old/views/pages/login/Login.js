@@ -1,29 +1,19 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-
 import {
-  CButton,
-  CCard,
-  CCardBody,
-  CCardGroup,
-  CCol,
-  CContainer,
-  CForm,
-  CFormInput,
-  CInputGroup,
-  CInputGroupText,
-  CRow,
-  CAlert,
+  CButton, CCard, CCardBody, CCardGroup, CCol, CContainer,
+  CForm, CFormInput, CInputGroup, CInputGroupText, CRow, CAlert,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilLockLocked, cilUser } from '@coreui/icons'
-
 import { login, me } from '../../../services/auth.service'
+import { useAuth } from '../../../hooks/useAuth'
 
 const Login = () => {
   const { t, i18n } = useTranslation('auth')
   const navigate = useNavigate()
+  const { can } = useAuth()
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -42,7 +32,11 @@ const Login = () => {
     try {
       await login(username, password)
       await me()
-      navigate('/dashboard')
+
+      // Редиректим на первую доступную страницу
+      const pages = ['/webphone', '/dashboard', '/tickets', '/staff', '/companies']
+      const firstAllowed = pages.find(p => can(p)) || '/webphone'
+      navigate(firstAllowed)
     } catch (err) {
       console.error('Login error:', err)
       setError(t('error.invalid'))
@@ -59,18 +53,11 @@ const Login = () => {
             <CCardGroup>
               <CCard className="p-4">
                 <CCardBody>
-
-                  {/* language selector */}
                   <div className="text-end mb-2">
                     <select
                       value={i18n.language}
                       onChange={(e) => changeLang(e.target.value)}
-                      style={{
-                        border: 'none',
-                        background: 'transparent',
-                        fontSize: '0.9rem',
-                        cursor: 'pointer',
-                      }}
+                      style={{ border: 'none', background: 'transparent', fontSize: '0.9rem', cursor: 'pointer' }}
                     >
                       <option value="ru">RU</option>
                       <option value="en">EN</option>
@@ -82,15 +69,10 @@ const Login = () => {
                     <h1>{t('title')}</h1>
                     <p className="text-body-secondary">{t('subtitle')}</p>
 
-                    {error && (
-                      <CAlert color="danger" className="mb-3">{error}</CAlert>
-                    )}
+                    {error && <CAlert color="danger" className="mb-3">{error}</CAlert>}
 
-                    {/* Username */}
                     <CInputGroup className="mb-3">
-                      <CInputGroupText>
-                        <CIcon icon={cilUser} />
-                      </CInputGroupText>
+                      <CInputGroupText><CIcon icon={cilUser} /></CInputGroupText>
                       <CFormInput
                         placeholder={t('username')}
                         autoComplete="username"
@@ -100,11 +82,8 @@ const Login = () => {
                       />
                     </CInputGroup>
 
-                    {/* Password */}
                     <CInputGroup className="mb-4">
-                      <CInputGroupText>
-                        <CIcon icon={cilLockLocked} />
-                      </CInputGroupText>
+                      <CInputGroupText><CIcon icon={cilLockLocked} /></CInputGroupText>
                       <CFormInput
                         type="password"
                         placeholder={t('password')}
@@ -117,12 +96,7 @@ const Login = () => {
 
                     <CRow>
                       <CCol xs={6}>
-                        <CButton
-                          color="primary"
-                          className="px-4"
-                          type="submit"
-                          disabled={loading}
-                        >
+                        <CButton color="primary" className="px-4" type="submit" disabled={loading}>
                           {loading ? t('loading') : t('login')}
                         </CButton>
                       </CCol>
@@ -136,7 +110,6 @@ const Login = () => {
                 </CCardBody>
               </CCard>
 
-              {/* Правая панель */}
               <CCard className="text-white bg-primary py-5" style={{ width: '44%' }}>
                 <CCardBody className="text-center">
                   <div>
@@ -150,7 +123,6 @@ const Login = () => {
                   </div>
                 </CCardBody>
               </CCard>
-
             </CCardGroup>
           </CCol>
         </CRow>

@@ -44,5 +44,8 @@
   "operators": "операторов",
   "tab_pending": "Ожидают активации",
   "no_pending": "Нет заявок",
-  "reject": "Отклонить"
+  "reject": "Отклонить",
+  "role_operator": "Оператор",
+  "role_supervisor": "Супервайзер",
+  "role_hr": "HR"
 }

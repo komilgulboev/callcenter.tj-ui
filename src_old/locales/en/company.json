@@ -44,5 +44,8 @@
   "operators": "operators",
   "tab_pending": "Pending",
   "no_pending": "No pending users",
-  "reject": "Reject"
+  "reject": "Reject",
+  "role_operator": "Operator",
+  "role_supervisor": "Supervisor",
+  "role_hr": "HR"
 }

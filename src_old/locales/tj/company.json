@@ -44,5 +44,8 @@
   "operators": "операторон",
   "tab_pending": "Интизори фаъолсозӣ",
   "no_pending": "Дархосте нест",
-  "reject": "Рад кардан"
+  "reject": "Рад кардан",
+  "role_operator": "Оператор",
+  "role_supervisor": "Супервайзер",
+  "role_hr": "HR"
 }
