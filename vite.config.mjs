@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react'
 import path from 'node:path'
 import autoprefixer from 'autoprefixer'
 
-export default defineConfig({
-  base: './',
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? './' : '/',
   build: { outDir: 'build' },
   css: {
     postcss: { plugins: [autoprefixer()] },
@@ -26,5 +26,11 @@ export default defineConfig({
     alias: { src: path.resolve(__dirname, 'src') },
     extensions: ['.mjs', '.js', '.jsx', '.ts', '.tsx', '.json', '.scss'],
   },
-  server: { port: 3000 },
-})
+  server: {
+    port: 3000,
+    proxy: {
+      '/api': 'http://localhost:8080',
+      '/ws':  'http://localhost:8080',
+    },
+  },
+}))
