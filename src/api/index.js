@@ -83,6 +83,42 @@ export const tickets = {
   comments:(id)        => get(`/api/tickets/${id}/comments`),
 }
 
+// ─── Topics ──────────────────────────────────────────────────
+export const topics = {
+  my:     ()                    => get('/api/topics'),
+  list:   (tenantId)            => get(`/api/tenants/${tenantId}/topics`),
+  create: (tenantId, data)      => post(`/api/tenants/${tenantId}/topics`, data),
+  update: (tenantId, id, data)  => put(`/api/tenants/${tenantId}/topics/${id}`, data),
+  remove: (tenantId, id)        => del(`/api/tenants/${tenantId}/topics/${id}`),
+}
+
+// ─── IVR / Queue ─────────────────────────────────────────────
+export const ivr = {
+  get:            (tenantId)        => get(`/api/ivr?tenantId=${tenantId}`),
+  updateConfig:   (tenantId, data)  => put('/api/ivr' + (tenantId ? `?tenantId=${tenantId}` : ''), data),
+  sync:           (tenantId)        => post('/api/ivr/sync' + (tenantId ? `?tenantId=${tenantId}` : '')),
+  uploadGreeting: (tenantId, file)  => {
+    const fd = new FormData()
+    fd.append('file', file)
+    const token = localStorage.getItem('accessToken')
+    return fetch(`${BASE_URL}/api/ivr/greeting?tenantId=${tenantId}`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: fd,
+    }).then(async r => {
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || r.statusText) }
+      return r.json()
+    })
+  },
+  listOptions:    (tenantId)        => get(`/api/ivr/options?tenantId=${tenantId}`),
+  saveOption:     (tenantId, data)  => post('/api/ivr/options' + (tenantId ? `?tenantId=${tenantId}` : ''), data),
+  deleteOption:   (tenantId, digit) => del(`/api/ivr/options/${digit}?tenantId=${tenantId}`),
+  listMembers:    (tenantId)        => get(`/api/ivr/members?tenantId=${tenantId}`),
+  addMember:      (tenantId, username) => post('/api/ivr/members' + (tenantId ? `?tenantId=${tenantId}` : ''), { username }),
+  removeMember:   (tenantId, username) => del(`/api/ivr/members/${username}?tenantId=${tenantId}`),
+  availableUsers: (tenantId)        => get(`/api/ivr/users?tenantId=${tenantId}`),
+}
+
 // ─── CDR ─────────────────────────────────────────────────────
 export const cdr = {
   list:  (params) => get('/api/cdr' + toQuery(params)),

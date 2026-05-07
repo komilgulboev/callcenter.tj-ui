@@ -8,6 +8,8 @@
   cilList,
   cilSettings,
   cilUserFollow,
+  cilTag,
+  cilDialpad,
 } from '@coreui/icons'
 
 const navigation = [
@@ -16,6 +18,8 @@ const navigation = [
   { component: 'CNavItem',  name: 'Tenants',      to: '/tenants',      icon: cilBuilding,    roles: [0] },
   { component: 'CNavItem',  name: 'Tenant Users', to: '/tenant-users', icon: cilUserFollow,  roles: [0] },
   { component: 'CNavItem',  name: 'Users',        to: '/users',        icon: cilPeople,      roles: [0, 1] },
+  { component: 'CNavItem',  name: 'Каталог тем',  to: '/topics',       icon: cilTag,         roles: [0, 1] },
+  { component: 'CNavItem',  name: 'IVR / Очередь', to: '/ivr',          icon: cilDialpad,     roles: [1] },
   { component: 'CNavTitle', name: 'Call Center' },
   { component: 'CNavItem',  name: 'WebPhone',     to: '/webphone',     icon: cilPhone },
   { component: 'CNavItem',  name: 'Monitor',      to: '/monitor',      icon: cilHeadphones,  roles: [0, 1, 2] },

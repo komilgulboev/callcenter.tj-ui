@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Read(//c/Users/kgulboev/AppData/Local/Temp/claude/c--Users-kgulboev-Projects-CallCenter-callcenter-tj-callcenter-tj-ui/a0612470-d57e-473c-bac7-8a699c9241b8/tasks/**)",
+      "Read(//c/Users/kgulboev/Projects/CallCenter/callcenter.tj/callcentrix-backend/**)",
+      "Bash(go build *)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(echo \"BACKEND_EXIT:$?\")",
+      "Bash(echo \"FRONTEND_EXIT:$?\")",
+      "Bash(ls -la \"C:\\\\Users\\\\kgulboev\\\\Projects\\\\CallCenter\\\\callcenter.tj\\\\callcentrix-backend\\\\\" | grep -i upload)",
+      "Read(//c/Users/kgulboev/Projects/CallCenter/callcenter.tj/**)",
+      "Bash(cd /c/Users/kgulboev/Projects/CallCenter/callcenter.tj/callcentrix-backend && cat .env | grep DB_DSN)",
+      "Read(//c/c/Users/kgulboev/Projects/CallCenter/callcenter.tj/callcentrix-backend/**)",
+      "Bash(PGPASSWORD=postgres psql -h 172.20.40.2 -U postgres -d callcentrix -c \"SELECT id, transport, context FROM ast_ps_endpoints WHERE id IN \\('928192424','918111133','918639683'\\);\")",
+      "Bash(powershell.exe -Command \"& 'C:\\\\Program Files\\\\PostgreSQL\\\\16\\\\bin\\\\psql.exe' -h 172.20.40.2 -U postgres -d callcentrix -c \\\\\"SELECT id, transport, context FROM ast_ps_endpoints WHERE id IN \\('928192424','918111133','918639683'\\);\\\\\" 2>&1\")",
+      "Bash(powershell.exe -Command \"& 'C:\\\\Program Files\\\\PostgreSQL\\\\15\\\\bin\\\\psql.exe' -h 172.20.40.2 -U postgres -d callcentrix -c \\\\\"SELECT id, transport, context FROM ast_ps_endpoints WHERE id IN \\('928192424','918111133','918639683'\\);\\\\\" 2>&1\")",
+      "Bash(PGPASSWORD=postgres psql -h 172.20.40.2 -U postgres -d callcentrix -c \"SELECT id, transport, context, disallow, allow, media_encryption FROM ast_ps_endpoints WHERE id IN \\('928192424','918111133','918639683'\\) ORDER BY id;\")",
+      "Bash(powershell.exe -Command ' *)"
+    ]
+  }
+}

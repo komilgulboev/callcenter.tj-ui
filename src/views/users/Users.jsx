@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   CButton, CCard, CCardBody, CModal, CModalBody, CModalFooter,
   CModalHeader, CModalTitle, CForm, CFormInput, CFormLabel,
@@ -6,7 +7,7 @@ import {
   CTableHeaderCell, CTableRow, CBadge, CAlert, CSpinner, CTooltip,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilPlus, cilPencil, cilTrash, cilCheckCircle, cilBan, cilPhone } from '@coreui/icons'
+import { cilPlus, cilPencil, cilTrash, cilCheckCircle, cilBan, cilPhone, cilUserFollow } from '@coreui/icons'
 import { users as usersApi } from 'src/api'
 import useAuthStore from 'src/store/auth'
 
@@ -15,14 +16,16 @@ const ROLE_COLORS = ['danger', 'primary', 'warning', 'info']
 const EMPTY = { username: '', password: '', userType: '3', sipNo: '', firstName: '', lastName: '' }
 
 export default function Users() {
-  const [rows,    setRows]    = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState('')
-  const [modal,   setModal]   = useState(false)
-  const [editing, setEditing] = useState(null)
-  const [form,    setForm]    = useState(EMPTY)
-  const [saving,  setSaving]  = useState(false)
+  const [rows,           setRows]           = useState([])
+  const [loading,        setLoading]        = useState(true)
+  const [error,          setError]          = useState('')
+  const [modal,          setModal]          = useState(false)
+  const [editing,        setEditing]        = useState(null)
+  const [form,           setForm]           = useState(EMPTY)
+  const [saving,         setSaving]         = useState(false)
+  const [sipExistsWarn,  setSipExistsWarn]  = useState(false)
   const currentUser = useAuthStore((s) => s.user)
+  const navigate = useNavigate()
 
   const load = () => {
     setLoading(true)
@@ -34,7 +37,7 @@ export default function Users() {
 
   useEffect(load, [])
 
-  const openCreate = () => { setEditing(null); setForm(EMPTY); setModal(true) }
+  const openCreate = () => { setEditing(null); setForm(EMPTY); setSipExistsWarn(false); setModal(true) }
   const openEdit   = (u) => {
     setEditing(u)
     setForm({
@@ -49,16 +52,24 @@ export default function Users() {
 
   const handleSave = async () => {
     setSaving(true)
+    setSipExistsWarn(false)
     try {
       const payload = { ...form, userType: Number(form.userType) }
       if (!payload.password) delete payload.password
-      // sipNo defaults to username for operators
       if (!payload.sipNo) payload.sipNo = payload.username
       if (editing) await usersApi.update(editing.id, payload)
       else         await usersApi.create(payload)
       setModal(false)
       load()
-    } catch (e) { setError(e.message) }
+    } catch (e) {
+      if (e.message === 'sip_exists') {
+        setSipExistsWarn(true)
+      } else if (e.message === 'username_exists') {
+        setError('Пользователь с таким логином уже существует')
+      } else {
+        setError(e.message)
+      }
+    }
     finally { setSaving(false) }
   }
 
@@ -184,6 +195,27 @@ export default function Users() {
           <CModalTitle>{editing ? 'Edit User' : 'New User'}</CModalTitle>
         </CModalHeader>
         <CModalBody>
+          {sipExistsWarn && (
+            <CAlert color="warning" className="mb-3">
+              <div className="d-flex gap-2 align-items-start">
+                <CIcon icon={cilUserFollow} className="mt-1 flex-shrink-0" />
+                <div>
+                  <strong>Пользователь с таким SIP номером уже существует в системе.</strong>
+                  <div className="mt-1 small">
+                    Возможно он зарегистрирован в другом тенанте. Вы можете добавить
+                    существующего пользователя через раздел назначения пользователей.
+                  </div>
+                  <CButton
+                    size="sm" color="warning" className="mt-2"
+                    onClick={() => { setModal(false); navigate('/tenant-users') }}
+                  >
+                    <CIcon icon={cilUserFollow} className="me-1" />
+                    Перейти к назначению пользователей
+                  </CButton>
+                </div>
+              </div>
+            </CAlert>
+          )}
           <CAlert color="info" className="small py-2">
             <strong>Username = SIP number</strong> — e.g. <code>1001</code>, <code>1002</code>.<br />
             The same credentials are used for the web phone.

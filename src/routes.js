@@ -8,6 +8,8 @@ const Monitor      = React.lazy(() => import('src/views/monitor/Monitor'))
 const CDR          = React.lazy(() => import('src/views/cdr/CDR'))
 const Tickets      = React.lazy(() => import('src/views/tickets/Tickets'))
 const TicketDetail = React.lazy(() => import('src/views/tickets/TicketDetail'))
+const Topics       = React.lazy(() => import('src/views/topics/Topics'))
+const IVR          = React.lazy(() => import('src/views/ivr/IVR'))
 const Settings     = React.lazy(() => import('src/views/settings/Settings'))
 const Phone = React.lazy(() => import('src/views/phone/Phone.jsx'))
 
@@ -21,6 +23,8 @@ const routes = [
   { path: '/cdr',          name: 'CDR',          element: CDR,         roles: [0, 1, 2] },
   { path: '/tickets',      name: 'Tickets',      element: Tickets },
   { path: '/tickets/:id',  name: 'Ticket',       element: TicketDetail },
+  { path: '/topics',       name: 'Topics',       element: Topics,      roles: [0, 1] },
+  { path: '/ivr',          name: 'IVR',          element: IVR,         roles: [1] },
   { path: '/settings',     name: 'Settings',     element: Settings,    roles: [0, 1] },
 ]
 

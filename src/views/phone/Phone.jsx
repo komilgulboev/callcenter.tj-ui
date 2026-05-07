@@ -13,6 +13,7 @@ import {
 } from '@coreui/icons'
 import usePhoneStore from 'src/store/phone'
 import useAuthStore from 'src/store/auth'
+import { topics as topicsApi } from 'src/api'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
@@ -34,6 +35,11 @@ function fmtDuration(s) {
   return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 }
 
+function getTopicName(topic, lang) {
+  if (!topic?.names) return '—'
+  return topic.names[lang] || topic.names.ru || topic.names.tj || topic.names.en || '—'
+}
+
 const KEYPAD = [
   ['1',''],['2','ABC'],['3','DEF'],
   ['4','GHI'],['5','JKL'],['6','MNO'],
@@ -47,21 +53,38 @@ function authHeaders() {
 
 // ─── Ticket Create Modal ──────────────────────────────────────
 function TicketCreateModal({ visible, onClose, callerNo, calleeNo, onCreated }) {
-  const [form, setForm]     = useState({ subject: '', body: '', priority: 'normal', status: 'new' })
-  const [saving, setSaving] = useState(false)
-  const [error, setError]   = useState('')
+  const lang = localStorage.getItem('ui-lang') || 'ru'
+
+  const [form, setForm]             = useState({ subject: '', body: '', priority: 'normal', status: 'new', topicId: '' })
+  const [saving, setSaving]         = useState(false)
+  const [error, setError]           = useState('')
+  const [topicsList, setTopicsList] = useState([])
+  const [topicsLoading, setTopicsLoading] = useState(false)
 
   useEffect(() => {
-    if (visible) { setForm({ subject: '', body: '', priority: 'normal', status: 'new' }); setError('') }
+    if (!visible) return
+    setForm({ subject: '', body: '', priority: 'normal', status: 'new', topicId: '' })
+    setError('')
+    setTopicsLoading(true)
+    topicsApi.my()
+      .then(d => setTopicsList(d.topics ?? []))
+      .catch(() => setTopicsList([]))
+      .finally(() => setTopicsLoading(false))
   }, [visible])
 
   const handleSubmit = async () => {
     if (!form.subject.trim()) { setError('Введите тему'); return }
     setSaving(true); setError('')
     try {
+      const payload = {
+        subject: form.subject, body: form.body,
+        callerNo, calleeNo,
+        priority: form.priority, status: form.status,
+      }
+      if (form.topicId) payload.topicId = parseInt(form.topicId)
       const res = await fetch(`${API_URL}/api/tickets`, {
         method: 'POST', headers: authHeaders(),
-        body: JSON.stringify({ subject: form.subject, body: form.body, callerNo, calleeNo, priority: form.priority, status: form.status }),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('Ошибка сохранения')
       const data = await res.json()
@@ -84,6 +107,25 @@ function TicketCreateModal({ visible, onClose, callerNo, calleeNo, onCreated }) 
             <CCol md={6}>
               <CFormLabel>Внутренний номер</CFormLabel>
               <CFormInput value={calleeNo} readOnly className="bg-light" />
+            </CCol>
+            <CCol xs={12}>
+              <CFormLabel>
+                Тема разговора{' '}
+                {topicsLoading && <CSpinner size="sm" className="ms-1" />}
+              </CFormLabel>
+              <CFormSelect
+                value={form.topicId}
+                onChange={(e) => setForm(f => ({ ...f, topicId: e.target.value }))}
+                disabled={topicsLoading}
+              >
+                <option value="">— Без темы —</option>
+                {topicsList.map(t => (
+                  <option key={t.id} value={t.id}>{getTopicName(t, lang)}</option>
+                ))}
+              </CFormSelect>
+              {!topicsLoading && topicsList.length === 0 && (
+                <div className="text-muted small mt-1">Каталог тем пуст — добавьте темы в разделе «Каталог тем»</div>
+              )}
             </CCol>
             <CCol xs={12}>
               <CFormLabel>Тема <span className="text-danger">*</span></CFormLabel>
@@ -534,6 +576,7 @@ export default function Phone() {
                     <tr>
                       <th>#</th>
                       <th>Тема</th>
+                      <th>Тема разговора</th>
                       <th>Статус</th>
                       <th>Приоритет</th>
                       <th>Дата создания</th>
@@ -544,8 +587,11 @@ export default function Phone() {
                     {callerTickets.map(t => (
                       <tr key={t.id}>
                         <td className="text-muted">{t.id}</td>
-                        <td style={{ maxWidth:260, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        <td style={{ maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                           {t.subject}
+                        </td>
+                        <td className="text-muted small">
+                          {t.topic ? getTopicName(t.topic, localStorage.getItem('ui-lang') || 'ru') : '—'}
                         </td>
                         <td><CBadge color={TICKET_STATUS_COLOR[t.status] || 'secondary'}>{t.status}</CBadge></td>
                         <td><CBadge color={PRIORITY_COLOR[t.priority] || 'secondary'}>{t.priority}</CBadge></td>
