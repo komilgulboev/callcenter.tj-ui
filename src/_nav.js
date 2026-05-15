@@ -10,6 +10,7 @@
   cilUserFollow,
   cilTag,
   cilDialpad,
+  cilShieldAlt,
 } from '@coreui/icons'
 
 const navigation = [
@@ -20,6 +21,7 @@ const navigation = [
   { component: 'CNavItem',  name: 'Users',        to: '/users',        icon: cilPeople,      roles: [0, 1] },
   { component: 'CNavItem',  name: 'Каталог тем',  to: '/topics',       icon: cilTag,         roles: [0, 1] },
   { component: 'CNavItem',  name: 'IVR / Очередь', to: '/ivr',          icon: cilDialpad,     roles: [1] },
+  { component: 'CNavItem',  name: 'Белый список',  to: '/whitelist',    icon: cilShieldAlt,   roles: [0, 1] },
   { component: 'CNavTitle', name: 'Call Center' },
   { component: 'CNavItem',  name: 'WebPhone',     to: '/webphone',     icon: cilPhone },
   { component: 'CNavItem',  name: 'Monitor',      to: '/monitor',      icon: cilHeadphones,  roles: [0, 1, 2] },

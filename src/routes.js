@@ -10,6 +10,7 @@ const Tickets      = React.lazy(() => import('src/views/tickets/Tickets'))
 const TicketDetail = React.lazy(() => import('src/views/tickets/TicketDetail'))
 const Topics       = React.lazy(() => import('src/views/topics/Topics'))
 const IVR          = React.lazy(() => import('src/views/ivr/IVR'))
+const Whitelist    = React.lazy(() => import('src/views/whitelist/Whitelist'))
 const Settings     = React.lazy(() => import('src/views/settings/Settings'))
 const Phone = React.lazy(() => import('src/views/phone/Phone.jsx'))
 
@@ -25,6 +26,7 @@ const routes = [
   { path: '/tickets/:id',  name: 'Ticket',       element: TicketDetail },
   { path: '/topics',       name: 'Topics',       element: Topics,      roles: [0, 1] },
   { path: '/ivr',          name: 'IVR',          element: IVR,         roles: [1] },
+  { path: '/whitelist',    name: 'Whitelist',    element: Whitelist,   roles: [0, 1] },
   { path: '/settings',     name: 'Settings',     element: Settings,    roles: [0, 1] },
 ]
 

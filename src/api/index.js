@@ -83,6 +83,16 @@ export const tickets = {
   comments:(id)        => get(`/api/tickets/${id}/comments`),
 }
 
+// ─── Whitelist ───────────────────────────────────────────────
+export const whitelist = {
+  list:   (tenantId, search) => get(`/api/whitelist?tenantId=${tenantId}` + (search ? `&search=${encodeURIComponent(search)}` : '')),
+  create: (tenantId, data)   => post(`/api/whitelist?tenantId=${tenantId}`, data),
+  update: (tenantId, id, data) => put(`/api/whitelist/${id}?tenantId=${tenantId}`, data),
+  remove: (tenantId, id)     => del(`/api/whitelist/${id}?tenantId=${tenantId}`),
+  toggle: (tenantId, id)     => patch(`/api/whitelist/${id}/toggle?tenantId=${tenantId}`),
+  check:  (tenantId, phone)  => get(`/api/whitelist/check?tenantId=${tenantId}&phone=${encodeURIComponent(phone)}`),
+}
+
 // ─── Topics ──────────────────────────────────────────────────
 export const topics = {
   my:     ()                    => get('/api/topics'),

@@ -62,7 +62,10 @@ const usePhoneStore = create((set, get) => ({
   answer() {
     const { session } = get()
     if (!session) return
-    session.answer({ mediaConstraints: { audio: true, video: false } })
+    session.answer({
+      mediaConstraints: { audio: true, video: false },
+      sessionTimersExpires: 120,
+    })
   },
 
   hangup() {
@@ -100,17 +103,20 @@ const usePhoneStore = create((set, get) => ({
     const startedAt = Date.now()
     set({ session, status: initialStatus, remoteNumber: remote })
 
+    // Attach remote audio as soon as track arrives (before confirmed)
+    session.on('peerconnection', ({ peerconnection }) => {
+      peerconnection.addEventListener('track', (e) => {
+        const audio = document.getElementById('cx-remote-audio')
+        if (audio && e.streams?.[0]) audio.srcObject = e.streams[0]
+      })
+    })
+
     session.on('confirmed', () => {
       const timer = setInterval(
         () => set((s) => ({ callDuration: s.callDuration + 1 })),
         1000,
       )
       set({ status: 'active', _timer: timer })
-
-      session.connection?.addEventListener('track', (e) => {
-        const audio = document.getElementById('cx-remote-audio')
-        if (audio && e.streams?.[0]) audio.srcObject = e.streams[0]
-      })
     })
 
     const addHistory = (result) => {
@@ -125,13 +131,17 @@ const usePhoneStore = create((set, get) => ({
             direction: initialStatus === 'ringing_in' ? 'in' : 'out',
             time:     new Date(startedAt).toLocaleTimeString(),
           },
-          ...s.callHistory.slice(0, 49), // keep last 50
+          ...s.callHistory.slice(0, 49),
         ],
       }))
     }
 
-    session.on('ended',  () => { addHistory('ended');  get()._resetCall() })
-    session.on('failed', () => { addHistory('missed'); get()._resetCall() })
+    session.on('ended',  (e) => { addHistory('ended');  get()._resetCall() })
+    session.on('failed', (e) => {
+      console.error('[JsSIP] call failed:', e.cause, e.message)
+      addHistory('missed')
+      get()._resetCall()
+    })
   },
 
   _resetCall() {
